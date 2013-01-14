@@ -50,14 +50,39 @@ function G = bprop_net6(net, input, internal, output, W)
     end
     G.antembed = ant' * sparse(antfeatures_inputgrads);
     
-    Ares_inputgrads = internal.Ares .* (1 - internal.Ares) .* ...
-        sum(internal.antfeatures .* wantfeatures_grads(input.antmap,:), 2);
-    G.AhidAres = addbias(internal.Ahid)' * Ares_inputgrads;
+    % Ares logistic layer
+%     Ares_inputgrads = internal.Ares .* (1 - internal.Ares) .* ...
+%         sum(internal.antfeatures .* wantfeatures_grads(input.antmap,:), 2);
+%     G.AhidAres = addbias(internal.Ahid)' * Ares_inputgrads;
+% 
+%     Ahid_inputgrads = internal.Ahid .* (1 - internal.Ahid) .* ...
+%         (Ares_inputgrads * W.AhidAres(2:end,:)');
+%     G.linkAhid = addbias(input.link)' * Ahid_inputgrads;
 
-    Ahid_inputgrads = internal.Ahid .* (1 - internal.Ahid) .* ...
-        (Ares_inputgrads * W.AhidAres(2:end,:)');
-    G.linkAhid = addbias(input.link)' * Ahid_inputgrads;
-
+    % Ares softmax layer
+    Ares_outputgrads = sum(internal.antfeatures .* wantfeatures_grads(input.antmap,:), 2);
+    Ares_wsuminput_tmp = bsxfun(@times, internal.Ahid, internal.Ares);
+    Ares_wsuminput_c = cellfun(@(x) repmat(sum(Ares_wsuminput_tmp(x,:), 1), size(x, 1), 1), ...
+        input.antidx, 'UniformOutput', false);
+    Ares_wsuminput = vertcat(Ares_wsuminput_c{:});
+    G.AhidAres = [0; ...
+        sum(bsxfun(@times, internal.Ahid - Ares_wsuminput, internal.Ares .* Ares_outputgrads), 1)'];
+    
+    dAresin_dAhidin = bsxfun(@times, internal.Ahid .* (1 - internal.Ahid), W.AhidAres(2:end,:)');
+    dAresin_dlinkAhid = bsxfun(@times, reshape(dAresin_dAhidin, [], 1, net.Ahid), ...
+        addbias(full(input.link)));
+    dAresin_dlinkAhid_wsum_tmp = bsxfun(@times, dAresin_dlinkAhid, internal.Ares);
+    dAresin_dlinkAhid_wsum_c = cellfun(@(x) repmat(sum(dAresin_dlinkAhid_wsum_tmp(x,:,:), 1), [size(x, 1) 1 1]), ...
+        input.antidx, 'UniformOutput', false);
+    dAresin_dlinkAhid_wsum = cat(1, dAresin_dlinkAhid_wsum_c{:});
+    G.linkAhid = reshape(sum(bsxfun(@times, dAresin_dlinkAhid - dAresin_dlinkAhid_wsum, ...
+        internal.Ares .* Ares_outputgrads), 1), ...
+        size(W.linkAhid));
+    
+    %Ares_inputgrads = internal.Ares .* (1 - internal.Ares) .* Ares_outputgrads;
+    %Ahid_inputgrads = internal.Ahid .* (1 - internal.Ahid) .* (Ares_inputgrads * W.AhidAres(2:end,:)');
+    %G.linkAhid = addbias(input.link)' * Ahid_inputgrads;
+    
     if isfield(net, 'regulariser') && net.regulariser > 0
         G = transform_weights(@(x,y) x + net.regulariser * y, G, W);
     end

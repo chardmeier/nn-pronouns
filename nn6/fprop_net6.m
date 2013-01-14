@@ -26,10 +26,11 @@ function [output, internal] = fprop_net6(net, input, W, prediction_mode)
     antfeatures = sigmoid(ant * W.antembed);
 
     Ahid = sigmoid(addbias(input.link) * W.linkAhid);
-    %Aresin = addbias(Ahid) * W.AhidAres;
-    %Aresc = cellfun(@(x) softmax(Aresin(x,:)')', input.antidx, 'UniformOutput', false);
-    %Ares = vertcat(Aresc{:});
-    Ares = sigmoid(addbias(Ahid) * W.AhidAres);
+
+    Aresin = addbias(Ahid) * W.AhidAres;
+    Aresc = cellfun(@(x) softmax(Aresin(x,:)')', input.antidx, 'UniformOutput', false);
+    Ares = vertcat(Aresc{:});
+    %Ares = sigmoid(addbias(Ahid) * W.AhidAres);
     
     wAres = sparse(input.antmap, 1:length(input.antmap), Ares);
     wantfeatures = wAres * antfeatures;
