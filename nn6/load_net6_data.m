@@ -21,8 +21,10 @@ function [input, vocab] = load_net6_data(dataprefix, trainidx, validx, testidx)
     
     vocab.srcsingle = load(inpfile('srcsingle'));
     vocab.tgtsingle = load(inpfile('tgtsingle'));
+        
+    vocab.srcngsize = 7;
     
-    allsrc = spconvert([load(inpfile('srcfeat')); 1 length(vocab.srcvoc) 0]);
+    allsrc = spconvert([load(inpfile('srcfeat')); 1 ((vocab.srcngsize+1) * length(vocab.srcvoc) - 1) 0]);
     allant = spconvert([load(inpfile('antfeat')); 1 length(vocab.tgtvoc) 0]);
     alltargets = load(inpfile('targets'));
     allantmap = load(inpfile('antmap'));
@@ -70,7 +72,5 @@ function [input, vocab] = load_net6_data(dataprefix, trainidx, validx, testidx)
     input.test.nada = allnada(testidx);
     input.test.targets = alltargets(testidx,:);
     [input.test.antmap,input.test.antidx] = idxcell2map(allantidx(testidx));
-    
-    vocab.srcngsize = 7;
 end
 
