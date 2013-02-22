@@ -1,4 +1,4 @@
-function [output, internal] = fprop_net6(net, input, W, prediction_mode)
+function [output, internal] = fprop_net7(net, input, W, prediction_mode)
 %UNTITLED2 Summary of this function goes here
 %   Detailed explanation goes here
     

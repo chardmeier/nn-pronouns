@@ -1,4 +1,4 @@
-function [input, vocab] = load_net6_data(dataprefix, trainidx, validx, testidx)
+function [input, vocab] = load_net7_data(dataprefix, trainidx, validx, testidx)
 %UNTITLED3 Summary of this function goes here
 %   Detailed explanation goes here
 

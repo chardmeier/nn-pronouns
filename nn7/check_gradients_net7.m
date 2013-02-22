@@ -1,4 +1,4 @@
-function Success = check_gradients_net6(net, inp, W, order)
+function Success = check_gradients_net7(net, inp, W, order)
 %UNTITLED Summary of this function goes here
 %   Detailed explanation goes here
     
@@ -14,7 +14,7 @@ function Success = check_gradients_net6(net, inp, W, order)
         startx = W.(f)(idx);
         for ii = 1:(2*range)
             W.(f)(idx) = startx + offsets(ii);
-            out = fprop_net6(net, inp, W, true);
+            out = fprop_net7(net, inp, W, true);
             xx(ii) = score(inp, out);
         end
     end
@@ -22,9 +22,9 @@ function Success = check_gradients_net6(net, inp, W, order)
     nchecks = 20;
     threshold = .01;
     
-    %W = init_weights_net6(net, @(x,y) .3 * randn(x,y));
-    [baseout, internal] = fprop_net6(net, inp, W, true);
-    grads = bprop_net6(net, inp, internal, baseout, W);
+    %W = init_weights_net7(net, @(x,y) .3 * randn(x,y));
+    [baseout, internal] = fprop_net7(net, inp, W, true);
+    grads = bprop_net7(net, inp, internal, baseout, W);
     %basescore = score(inp, baseout);
     
     Success = true;

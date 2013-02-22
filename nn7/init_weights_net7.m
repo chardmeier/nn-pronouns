@@ -1,4 +1,4 @@
-function W = init_weights_net6(net, initfn)
+function W = init_weights_net7(net, initfn)
 %UNTITLED6 Summary of this function goes here
 %   Detailed explanation goes here
 

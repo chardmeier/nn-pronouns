@@ -1,4 +1,4 @@
-function [best_weights, trainerr, valerr, best_valerr] = nnopt_net6(id, net, input, params)
+function [best_weights, trainerr, valerr, best_valerr] = nnopt_net7(id, net, input, params)
 %UNTITLED7 Summary of this function goes here
 %   Detailed explanation goes here
 
@@ -25,18 +25,18 @@ function [best_weights, trainerr, valerr, best_valerr] = nnopt_net6(id, net, inp
     if isfield(net, 'initweights')
         W = net.initweights;
     else
-        W = init_weights_net6(net, @(x,y) stddev * randn(x,y));
+        W = init_weights_net7(net, @(x,y) stddev * randn(x,y));
     end
     
     if isfield(params, 'initgain')
         gain = params.initgain;
     else
-        gain = init_weights_net6(net, @ones);
+        gain = init_weights_net7(net, @ones);
     end
         
-    weight_change = init_weights_net6(net, @zeros);
-    prev_grad = init_weights_net6(net, @zeros);
-    rms = init_weights_net6(net, @ones);
+    weight_change = init_weights_net7(net, @zeros);
+    prev_grad = init_weights_net7(net, @zeros);
+    rms = init_weights_net7(net, @ones);
     best_valerr = inf;
     alphachange_steps = 0;
     tiny = 1e-30;
@@ -47,9 +47,9 @@ function [best_weights, trainerr, valerr, best_valerr] = nnopt_net6(id, net, inp
         err = 0;
         for j = 1:nbatch
             thisperm = batchperm(j, batchperm(j,:) > 0);
-            batchinput = create_batch_net6(input, thisperm);
-            [output,hidden] = fprop_net6(net, batchinput, W, false);
-            grad = bprop_net6(net, batchinput, hidden, output, W);
+            batchinput = create_batch_net7(input, thisperm);
+            [output,hidden] = fprop_net7(net, batchinput, W, false);
+            grad = bprop_net7(net, batchinput, hidden, output, W);
             err = err - sum(sum(batchinput.targets .* log(max(tiny, output)))) / input.nitems;
             
             rms = transform_weights(@(r,g) 0.9 * r + 0.1 * g .^ 2, rms, grad);
@@ -60,7 +60,7 @@ function [best_weights, trainerr, valerr, best_valerr] = nnopt_net6(id, net, inp
             W = transform_weights(@plus, W, weight_change);
             
             if isfield(net, 'weightconstraint')
-                weights = enforce_constraints_net6(net, weights);
+                weights = enforce_constraints_net7(net, weights);
             end
 
             gain = transform_weights(@(gn,gr,pg) (1 - .05 * (sign(gr)==sign(-pg))) .* gn + ...
@@ -94,7 +94,7 @@ function [best_weights, trainerr, valerr, best_valerr] = nnopt_net6(id, net, inp
         
         alphachange_steps = alphachange_steps + 1;
         
-        valout = fprop_net6(net, input.val, W, true);
+        valout = fprop_net7(net, input.val, W, true);
 
         valerr(i) = -sum(sum(input.val.targets .* log(max(tiny, valout)))) / input.val.nitems;
         if(valerr(i) < best_valerr)

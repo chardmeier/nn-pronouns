@@ -1,4 +1,4 @@
-function G = bprop_net6(net, input, internal, output, W)
+function G = bprop_net7(net, input, internal, output, W)
 %UNTITLED4 Summary of this function goes here
 %   Detailed explanation goes here
 

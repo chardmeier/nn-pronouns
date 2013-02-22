@@ -1,4 +1,4 @@
-function net = setup_net6(srcembed, antembed, Ahid, hidden, output, vocab)
+function net = setup_net7(srcembed, antembed, Ahid, hidden, output, vocab)
 %UNTITLED4 Summary of this function goes here
 %   Detailed explanation goes here
     net = struct();
