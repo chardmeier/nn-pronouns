@@ -24,7 +24,12 @@ function [output, internal] = fprop_net6(net, input, W, prediction_mode)
         ant = input.ant;
     end
     antfeatures = sigmoid(ant * W.antembed);
-
+    if isfield(net, 'sample_antfeatures') && net.sample_antfeatures
+        santfeatures = 0 + (rand(size(antfeatures)) < antfeatures);
+    else
+        santfeatures = antfeatures;
+    end
+    
     Ahid = sigmoid(addbias(input.link) * W.linkAhid);
 
     Aresin = addbias(Ahid) * W.AhidAres;
@@ -33,7 +38,7 @@ function [output, internal] = fprop_net6(net, input, W, prediction_mode)
     %Ares = sigmoid(addbias(Ahid) * W.AhidAres);
     
     wAres = sparse(input.antmap, 1:length(input.antmap), Ares);
-    wantfeatures = wAres * antfeatures;
+    wantfeatures = wAres * santfeatures;
 
     embed = [reshape(srcembed, input.nitems, net.srcngsize * net.srcembed), ...
              wantfeatures];

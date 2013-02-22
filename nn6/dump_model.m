@@ -34,8 +34,14 @@ function dump_model(outstem, net, voc, W)
     % - hidden layer size
     % - output layer size
     
+    if isfield(net, 'sample_antfeatures') && net.sample_antfeatures
+        version = 2;
+    else
+        version = 1;
+    end
+    
     id = fopen(strcat(outstem, '.nn6.model'), 'w', 'n', 'UTF-8');
-    header = [hex2dec('2fed70b9') 6 1 ...
+    header = [hex2dec('2fed70b9') 6 version ...
                 net.srcngsize length(net.srcvoc) length(net.tgtvoc) ...
                 net.srcembed net.antembed net.hidden net.output];
     fwrite(id, header, 'uint32');
