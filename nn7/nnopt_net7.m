@@ -2,15 +2,10 @@ function [best_weights, trainerr, valerr, best_valerr] = nnopt_net7(id, net, inp
 %UNTITLED7 Summary of this function goes here
 %   Detailed explanation goes here
 
-    stddev = params.stddev;
     momentum = params.momentum;
-    nsteps = params.nsteps;
     alpha = params.initialrate;
     alphadecay = params.ratedecay;
-    adjust_rate = params.adjust_rate;
     batchsize = params.batchsize;
-    early_stopping = params.early_stopping;
-
 
     if mod(input.nitems, batchsize) > 0
         npad = batchsize - mod(input.nitems, batchsize);
@@ -19,63 +14,59 @@ function [best_weights, trainerr, valerr, best_valerr] = nnopt_net7(id, net, inp
     end
     nbatch = (input.nitems + npad) / batchsize;
     
-    trainerr = zeros(1, nsteps);
-    valerr = zeros(1, nsteps);
+    trainerr = zeros(1, params.nsteps);
+    valerr = zeros(1, params.nsteps);
     
     if isfield(net, 'initweights')
-        W = net.initweights;
+        weights = net.initweights;
     else
-        W = init_weights_net7(net, @(x,y) stddev * randn(x,y));
+        weights = params.stddev * randn(1, net.nweights);
     end
     
-    if isfield(params, 'initgain')
-        gain = params.initgain;
-    else
-        gain = init_weights_net7(net, @ones);
-    end
-        
-    weight_change = init_weights_net7(net, @zeros);
-    prev_grad = init_weights_net7(net, @zeros);
-    rms = init_weights_net7(net, @ones);
+    gain = ones(1, net.nweights);
+    weight_change = zeros(1, net.nweights);
+    prev_grad = zeros(1, net.nweights);
+    rms = ones(1, net.nweights);
     best_valerr = inf;
     alphachange_steps = 0;
     tiny = 1e-30;
     indices = [1:input.nitems, zeros(1, npad)];
-    for i = 1:nsteps
+    for i = 1:params.nsteps
         batchperm = reshape(indices(randperm(numel(indices))), nbatch, batchsize);
         
         err = 0;
         for j = 1:nbatch
             thisperm = batchperm(j, batchperm(j,:) > 0);
             batchinput = create_batch_net7(input, thisperm);
+            W = weightstruct_net7(net, weights);
             [output,hidden] = fprop_net7(net, batchinput, W, false);
-            grad = bprop_net7(net, batchinput, hidden, output, W);
+            G = bprop_net7(net, batchinput, hidden, output, W);
+            grad = weightvector_net7(G);
             err = err - sum(sum(batchinput.targets .* log(max(tiny, output)))) / input.nitems;
             
-            rms = transform_weights(@(r,g) 0.9 * r + 0.1 * g .^ 2, rms, grad);
-            grad = transform_weights(@(r,g) g ./ (sqrt(r + tiny)), rms, grad);
+            rms = 0.9 * rms + 0.1 * grad .^ 2;
+            grad = grad ./ sqrt(rms + tiny);
             
-            weight_change = transform_weights(@(wc, gn, gr) momentum * wc - alpha * gn .* gr, ...
-                weight_change, gain, grad);
-            W = transform_weights(@plus, W, weight_change);
+            weight_change = momentum * weight_change - alpha * gain .* grad;
+            weights = weights + weight_change;
             
             if isfield(net, 'weightconstraint')
                 weights = enforce_constraints_net7(net, weights);
             end
 
-            gain = transform_weights(@(gn,gr,pg) (1 - .05 * (sign(gr)==sign(-pg))) .* gn + ...
-                (sign(gr)==sign(pg)) * .05, gain, grad, prev_grad);
+            gain = (1 - .05 * (sign(grad) == sign(-prev_grad))) .* gain + ...
+                .05 * (sign(grad) == sign(prev_grad));
             
             prev_grad = grad;
         end
         trainerr(i) = err;
-        if adjust_rate && i > 6 && sum(diff(trainerr((i-6):(i-1))) > 0) > 2 && alphachange_steps > 5
+        if params.adjust_rate && i > 6 && sum(diff(trainerr((i-6):(i-1))) > 0) > 2 && alphachange_steps > 5
             %alpha = alpha / 2;
             alpha = alpha * .8;
             fprintf('Decreasing learning rate to %g\n', alpha);
             alphachange_steps = 0;
         end
-        if adjust_rate && i > 6 && alphachange_steps > 5
+        if params.adjust_rate && i > 6 && alphachange_steps > 5
             prob = .3 * sum(diff(trainerr((i-6):(i-1))) < 0) / 6;
             if rand < prob
                 alpha = alpha * 1.05;
@@ -94,12 +85,13 @@ function [best_weights, trainerr, valerr, best_valerr] = nnopt_net7(id, net, inp
         
         alphachange_steps = alphachange_steps + 1;
         
+        W = weightstruct_net7(net, weights);
         valout = fprop_net7(net, input.val, W, true);
 
         valerr(i) = -sum(sum(input.val.targets .* log(max(tiny, valout)))) / input.val.nitems;
         if(valerr(i) < best_valerr)
             best_valerr = valerr(i);
-            best_weights = W;
+            best_weights = weights;
         end
         fprintf('%d (%g): Training error: %g, validation error: %g\n', i, alpha, trainerr(i), valerr(i));
 % 
@@ -108,12 +100,12 @@ function [best_weights, trainerr, valerr, best_valerr] = nnopt_net7(id, net, inp
 %             fprintf('Adjusted learning rate to %g because of validation error\n', alpha);
 %         end
         
-        if early_stopping && i > 20 && min(valerr(i-19:i)) > best_valerr && valerr(i) - best_valerr > .1
+        if params.early_stopping && i > 20 && min(valerr(i-19:i)) > best_valerr && valerr(i) - best_valerr > .1
             break
         end
         
         if mod(i, 10) == 0
-            save(sprintf('nn6-%s.%d.mat', id, i));
+            save(sprintf('nn7-%s.%d.mat', id, i));
         end
     end
     

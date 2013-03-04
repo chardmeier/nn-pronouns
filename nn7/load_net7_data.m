@@ -23,9 +23,16 @@ function [input, vocab] = load_net7_data(dataprefix, trainidx, validx, testidx)
     vocab.tgtsingle = load(inpfile('tgtsingle'));
         
     vocab.srcngsize = 7;
+
+    vocab.srcwvecs = spconvert([load(inpfile('srcwvecs')); 1 length(vocab.srcvoc) 0]);
+    vocab.antwvecs = spconvert([load(inpfile('antwvecs')); 1 length(vocab.tgtvoc) 0]);
     
-    allsrc = spconvert([load(inpfile('srcfeat')); 1 ((vocab.srcngsize+1) * length(vocab.srcvoc) - 1) 0]);
-    allant = spconvert([load(inpfile('antfeat')); 1 length(vocab.tgtvoc) 0]);
+    allsrc = load(inpfile('src'));
+    
+    antdata = load(inpfile('ant'));
+    allant = sparse(antdata(:,1), antdata(:,2), 1, length(allsrc), length(vocab.tgtvoc)) * ...
+        vocab.antwvecs;
+    
     alltargets = load(inpfile('targets'));
     allantmap = load(inpfile('antmap'));
     

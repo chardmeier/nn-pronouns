@@ -2,9 +2,6 @@ function G = bprop_net7(net, input, internal, output, W)
 %UNTITLED4 Summary of this function goes here
 %   Detailed explanation goes here
 
-    antembed_bias = isfield(net, 'antembed_bias') && net.antembed_bias;
-    srcembed_bias = isfield(net, 'srcembed_bias') && net.srcembed_bias;
-    
     G = struct();
 
     % The last output of the softmax is unconnected
@@ -14,23 +11,25 @@ function G = bprop_net7(net, input, internal, output, W)
     outlayer_inputgrads = output - targets;
     
     G.hidout = addbias([input.nada, internal.hidden])' * outlayer_inputgrads;
-    hidlayer_inputgrads = internal.hidden .* (1 - internal.hidden) .* ...
+    hidlayer_inputgrads = net.transfer.hidden.df(internal.hidden) .* ...
         (outlayer_inputgrads * W.hidout(3:end,:)');
     
-    G.embhid = addbias([input.nada, internal.embed])' * hidlayer_inputgrads;
-    emblayer_outputgrads = hidlayer_inputgrads * W.embhid(3:end,:)';
+    G.joinhid = addbias([input.nada, internal.join])' * hidlayer_inputgrads;
+    joinlayer_outputgrads = hidlayer_inputgrads * W.embhid(3:end,:)';
     
-    srcembed = reshape(internal.embed(:,1:(net.srcngsize*net.srcembed)), ...
-        input.nitems, net.srcembed, net.srcngsize);
-    srcemb_inputgrads = srcembed .* (1 - srcembed) .* ...
-        reshape(emblayer_outputgrads(:,1:(net.srcngsize*net.srcembed)), ...
+    srcjoin_inputgrads = net.transfer.srcjoin.df(joinlayer_outputgrads(:,1:net.srcjoin));
+    G.srcembjoin = reshape(internal.srcembed, input.nitems, net.srcembed * net.srcngsize)' * srcjoin_inputgrads;
+    srcemblayer_outputgrads = srcjoin_inputgrads * W.srcembjoin(2:end,:)';
+    
+    srcemb_inputgrads = net.transfer.srcembed.df(internal.srcembed) .* ...
+        reshape(srcemblayer_outputgrads, ...
         input.nitems, net.srcembed, net.srcngsize);
 
     srcvocsize = length(net.srcvoc);
-    G.srcembed = sparse(srcvocsize + srcembed_bias, net.srcembed);
+    G.srcembed = sparse(srcvocsize + net.srcembed_bias, net.srcembed);
     for i = 1:net.srcngsize
-        srcin = input.src(:,((i-1)*srcvocsize+1):(i*srcvocsize));
-        if srcembed_bias
+        srcin = input.srcwvecs(input.src(:,i),:);
+        if net.srcembed_bias
             src = addbias(srcin);
         else
             src = srcin;
@@ -39,16 +38,15 @@ function G = bprop_net7(net, input, internal, output, W)
             src' * sparse(reshape(srcemb_inputgrads(:,:,i), input.nitems, net.srcembed));
     end
     
-    wantfeatures_grads = emblayer_outputgrads(:,(net.srcngsize*net.srcembed+1):end);
+    wantfeatures_grads = joinlayer_outputgrads(:,(net.srcjoin+1):end);
 
-    antfeatures_inputgrads = internal.antfeatures .* (1 - internal.antfeatures) .* ...
-        (internal.wAres' * wantfeatures_grads);
-    if antembed_bias
-        ant = addbias(input.ant);
-    else
-        ant = input.ant;
-    end
-    G.antembed = ant' * sparse(antfeatures_inputgrads);
+    Ahid2_inputgrads = net.transfer.Ahid2.df(internal.Ahid2) .* ...
+        (internal.wLres' * wantfeatures_grads);
+    G.Ahid1Ahid2 = addbias(internal.Ahid1)' * Ahid2_inputgrads;
+    
+    Ahid1_inputgrads = net.transfer.Ahid1.df(internal.Ahid1) .* ...
+        (Ahid2_inputgrads * W.Ahid1Ahid2(2:end,:)');
+    G.antembed = addbias(input.ant)' * sparse(Ahid1_inputgrads);
     
     % Ares logistic layer
 %     Ares_inputgrads = internal.Ares .* (1 - internal.Ares) .* ...
@@ -60,28 +58,27 @@ function G = bprop_net7(net, input, internal, output, W)
 %     G.linkAhid = addbias(input.link)' * Ahid_inputgrads;
 
     % Ares softmax layer
-    Ares_outputgrads = sum(internal.antfeatures .* wantfeatures_grads(input.antmap,:), 2);
-    Ares_wsuminput_tmp = bsxfun(@times, internal.Ahid, internal.Ares);
-    Ares_wsuminput_c = cellfun(@(x) repmat(sum(Ares_wsuminput_tmp(x,:), 1), size(x, 1), 1), ...
+    Lres_outputgrads = sum(internal.antfeatures .* wantfeatures_grads(input.antmap,:), 2);
+    Lres_wsuminput_tmp = bsxfun(@times, internal.Lhid, internal.Lres);
+    Lres_wsuminput_c = cellfun(@(x) repmat(sum(Lres_wsuminput_tmp(x,:), 1), size(x, 1), 1), ...
         input.antidx, 'UniformOutput', false);
-    Ares_wsuminput = vertcat(Ares_wsuminput_c{:});
-    G.AhidAres = [0; ...
-        sum(bsxfun(@times, internal.Ahid - Ares_wsuminput, internal.Ares .* Ares_outputgrads), 1)'];
+    Lres_wsuminput = vertcat(Lres_wsuminput_c{:});
+    G.LhidLres = [0; ...
+        sum(bsxfun(@times, internal.Lhid - Lres_wsuminput, internal.Lres .* Lres_outputgrads), 1)'];
     
-    dAresin_dAhidin = bsxfun(@times, internal.Ahid .* (1 - internal.Ahid), W.AhidAres(2:end,:)');
-    dAresin_dlinkAhid = bsxfun(@times, reshape(dAresin_dAhidin, [], 1, net.Ahid), ...
+    dLresin_dLhidin = bsxfun(@times, net.transfer.Lhid.df(internal.Lhid), W.LhidLres(2:end,:)');
+    dLresin_dlinkLhid = bsxfun(@times, reshape(dLresin_dLhidin, [], 1, net.Lhid), ...
         addbias(full(input.link)));
-    dAresin_dlinkAhid_wsum_tmp = bsxfun(@times, dAresin_dlinkAhid, internal.Ares);
-    dAresin_dlinkAhid_wsum_c = cellfun(@(x) repmat(sum(dAresin_dlinkAhid_wsum_tmp(x,:,:), 1), [size(x, 1) 1 1]), ...
+    dLresin_dlinkLhid_wsum_tmp = bsxfun(@times, dLresin_dlinkLhid, internal.Lres);
+    dLresin_dlinkLhid_wsum_c = cellfun(@(x) repmat(sum(dLresin_dlinkLhid_wsum_tmp(x,:,:), 1), [size(x, 1) 1 1]), ...
         input.antidx, 'UniformOutput', false);
-    dAresin_dlinkAhid_wsum = cat(1, dAresin_dlinkAhid_wsum_c{:});
-    G.linkAhid = reshape(sum(bsxfun(@times, dAresin_dlinkAhid - dAresin_dlinkAhid_wsum, ...
-        internal.Ares .* Ares_outputgrads), 1), ...
-        size(W.linkAhid));
+    dLresin_dlinkLhid_wsum = cat(1, dLresin_dlinkLhid_wsum_c{:});
+    G.linkLhid = reshape(sum(bsxfun(@times, dLresin_dlinkLhid - dLresin_dlinkLhid_wsum, ...
+        internal.Lres .* Lres_outputgrads), 1), size(W.linkLhid));
     
-    %Ares_inputgrads = internal.Ares .* (1 - internal.Ares) .* Ares_outputgrads;
-    %Ahid_inputgrads = internal.Ahid .* (1 - internal.Ahid) .* (Ares_inputgrads * W.AhidAres(2:end,:)');
-    %G.linkAhid = addbias(input.link)' * Ahid_inputgrads;
+    %Ares_inputgrads = internal.Lres .* (1 - internal.Lres) .* Lres_outputgrads;
+    %Ahid_inputgrads = internal.Lhid .* (1 - internal.Lhid) .* (Lres_inputgrads * W.LhidLres(2:end,:)');
+    %G.linkLhid = addbias(input.link)' * Lhid_inputgrads;
     
     if isfield(net, 'regulariser') && net.regulariser > 0
         G = transform_weights(@(x,y) x + net.regulariser * y, G, W);
