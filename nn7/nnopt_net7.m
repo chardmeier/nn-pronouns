@@ -2,6 +2,20 @@ function [best_weights, trainerr, valerr, best_valerr] = nnopt_net7(id, net, inp
 %UNTITLED7 Summary of this function goes here
 %   Detailed explanation goes here
 
+    if exist('gpuDeviceCount', 'file') && gpuDeviceCount >= 1
+        gpu = gpuDevice;
+        if gpu.DeviceSupported
+            togpu = @gpuArray;
+            fromgpu = @gather;
+        else
+            togpu = @double;
+            fromgpu = @double;
+        end
+    else
+        togpu = @double;
+        fromgpu = @double;
+    end
+    
     momentum = params.momentum;
     alpha = params.initialrate;
     alphadecay = params.ratedecay;
@@ -20,13 +34,16 @@ function [best_weights, trainerr, valerr, best_valerr] = nnopt_net7(id, net, inp
     if isfield(net, 'initweights')
         weights = net.initweights;
     else
-        weights = params.stddev * randn(1, net.nweights);
+        weights = params.stddev * randn(net.nweights, 1);
     end
+    gweights = togpu(weights);
     
-    gain = ones(1, net.nweights);
-    weight_change = zeros(1, net.nweights);
-    prev_grad = zeros(1, net.nweights);
-    rms = ones(1, net.nweights);
+    gain = togpu(ones(net.nweights, 1));
+    %weight_change = sparse(net.nweights, 1);
+    %prev_grad = sparse(net.nweights, 1);
+    weight_change = togpu(zeros(net.nweights, 1));
+    prev_grad = togpu(zeros(net.nweights, 1));
+    rms = togpu(ones(net.nweights, 1));
     best_valerr = inf;
     alphachange_steps = 0;
     tiny = 1e-30;
@@ -41,21 +58,37 @@ function [best_weights, trainerr, valerr, best_valerr] = nnopt_net7(id, net, inp
             W = weightstruct_net7(net, weights);
             [output,hidden] = fprop_net7(net, batchinput, W, false);
             G = bprop_net7(net, batchinput, hidden, output, W);
-            grad = weightvector_net7(G);
+            grad = togpu(weightvector_net7(G));
             err = err - sum(sum(batchinput.targets .* log(max(tiny, output)))) / input.nitems;
             
+            grad = (grad > 1e-5) .* grad; % conserve sparsity
+            if isfield(net, 'regulariser') && net.regulariser > 0
+                grad = grad + net.regulariser * gweights;
+            end
+            if isfield(net, 'l1regulariser') && net.l1regulariser > 0
+                grad = grad + net.l1regulariser * gweights;
+            end
+            
             rms = 0.9 * rms + 0.1 * grad .^ 2;
+            %[a,~,x] = find(grad);
+            %grad = sparse(a, 1, x ./ sqrt(rms(a) + tiny), net.nweights, 1);
             grad = grad ./ sqrt(rms + tiny);
             
             weight_change = momentum * weight_change - alpha * gain .* grad;
-            weights = weights + weight_change;
+            gweights = weights + weight_change;
+            weights = fromgpu(gweights);
             
-            if isfield(net, 'weightconstraint')
-                weights = enforce_constraints_net7(net, weights);
-            end
+            %if isfield(net, 'weightconstraint')
+            %    weights = enforce_constraints_net7(net, weights);
+            %end
 
-            gain = (1 - .05 * (sign(grad) == sign(-prev_grad))) .* gain + ...
-                .05 * (sign(grad) == sign(prev_grad));
+            changed_signs = (grad < 0 & prev_grad > 0) | (grad > 0 & prev_grad < 0);
+            gain(changed_signs) = .95 * gain(changed_signs);
+            same_signs = (grad < 0 & prev_grad < 0) | (grad > 0 & prev_grad > 0);
+            gain(same_signs) = gain(same_signs) + .05;
+            
+            %gain = (1 - .05 * (sign(grad) == sign(-prev_grad))) .* gain + ...
+            %    .05 * (sign(grad) == sign(prev_grad));
             
             prev_grad = grad;
         end

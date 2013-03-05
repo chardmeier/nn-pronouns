@@ -24,15 +24,21 @@ function [input, vocab] = load_net7_data(dataprefix, trainidx, validx, testidx)
         
     vocab.srcngsize = 7;
 
-    vocab.srcwvecs = spconvert([load(inpfile('srcwvecs')); 1 length(vocab.srcvoc) 0]);
-    vocab.antwvecs = spconvert([load(inpfile('antwvecs')); 1 length(vocab.tgtvoc) 0]);
+    % Thresholding saves massive amounts of memory
+    ssrcwvecs = load(inpfile('srcwvecs'));
+    vocab.srcwvecs = spconvert([ssrcwvecs(ssrcwvecs(:,3) > .01,:); 1 length(vocab.srcvoc) 0]);
+    
+    santwvecs = load(inpfile('tgtwvecs'));
+    vocab.antwvecs = spconvert([santwvecs(santwvecs(:,3) > .01,:); 1 length(vocab.tgtvoc) 0]);
     
     allsrc = load(inpfile('src'));
     
     antdata = load(inpfile('ant'));
-    allant = sparse(antdata(:,1), antdata(:,2), 1, length(allsrc), length(vocab.tgtvoc)) * ...
-        vocab.antwvecs;
-    
+    antwordmatrix = sparse(antdata(:,1), antdata(:,2), 1, max(antdata(:,1)), size(vocab.antwvecs, 1));
+    allant = sparse(1:size(antwordmatrix, 1), 1:size(antwordmatrix, 1), 1 ./ sum(antwordmatrix, 2)) * ...
+        antwordmatrix * vocab.antwvecs;
+        
+   
     alltargets = load(inpfile('targets'));
     allantmap = load(inpfile('antmap'));
     

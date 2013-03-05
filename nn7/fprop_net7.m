@@ -8,8 +8,8 @@ function [output, internal] = fprop_net7(net, input, W, prediction_mode)
     
     srcembed = zeros(input.nitems, net.srcembed, net.srcngsize);
     for i = 1:net.srcngsize
-        wvec = input.srcwvecs(input.src(:,i),:);
-        if net.srcembed_bias
+        wvec = net.srcwvecs(input.src(:,i),:);
+        if net.srcwvec_bias
             wvec = addbias(wvec);
         end
         if ~prediction_mode && isfield(net, 'dropout_src')
@@ -19,7 +19,7 @@ function [output, internal] = fprop_net7(net, input, W, prediction_mode)
     end
     srcembed(:) = net.transfer.srcembed.f(srcembed(:));
 
-    srcjoin = net.transfer.srcjoin.f(reshape(srcembed, input.nitems, net.srcngsize * net.srcembed) * W.srcembjoin);
+    srcjoin = net.transfer.srcjoin.f(addbias(reshape(srcembed, input.nitems, net.srcngsize * net.srcembed)) * W.srcembjoin);
     
     Ahid1 = net.transfer.Ahid1.f(addbias(input.ant) * W.antembed);
     Ahid2 = net.transfer.Ahid2.f(addbias(Ahid1) * W.Ahid1Ahid2);
@@ -44,7 +44,7 @@ function [output, internal] = fprop_net7(net, input, W, prediction_mode)
     output = softmax(addbias([input.nada, hidden]) * W.hidout, 'addcategory'); 
 
     internal = struct('Lhid', Lhid, 'Lres', Lres, 'wLres', wLres, ...
-        'Ahid1', Ahid1, 'Ahid2', Ahid2, 'join', join, ...
+        'srcembed', srcembed, 'Ahid1', Ahid1, 'Ahid2', Ahid2, 'join', join, ...
         'hidden', hidden);
 end
 
