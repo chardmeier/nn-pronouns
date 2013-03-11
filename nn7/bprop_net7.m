@@ -17,25 +17,18 @@ function G = bprop_net7(net, input, internal, output, W)
     G.joinhid = addbias([input.nada, internal.join])' * hidlayer_inputgrads;
     joinlayer_outputgrads = hidlayer_inputgrads * W.joinhid(3:end,:)';
     
-    srcjoin_inputgrads = net.transfer.srcjoin.df(joinlayer_outputgrads(:,1:net.srcjoin));
+    srcjoin_inputgrads = net.transfer.srcjoin.df(internal.join(:,1:net.srcjoin)) .* joinlayer_outputgrads(:,1:net.srcjoin);
     G.srcembjoin = addbias(reshape(internal.srcembed, input.nitems, net.srcembed * net.srcngsize))' * srcjoin_inputgrads;
     srcemblayer_outputgrads = srcjoin_inputgrads * W.srcembjoin(2:end,:)';
     
     srcemb_inputgrads = net.transfer.srcembed.df(internal.srcembed) .* ...
-        reshape(srcemblayer_outputgrads, ...
-        input.nitems, net.srcembed, net.srcngsize);
+        reshape(srcemblayer_outputgrads, input.nitems, net.srcembed, net.srcngsize);
 
-    %srcvocsize = length(net.srcvoc);
     G.srcembed = sparse(net.srcwvec + net.srcwvec_bias, net.srcembed);
     for i = 1:net.srcngsize
-        srcin = net.srcwvecs(input.src(:,i),:);
-        if net.srcwvec_bias
-            src = addbias(srcin);
-        else
-            src = srcin;
-        end
         G.srcembed = G.srcembed + ...
-            src' * sparse(reshape(srcemb_inputgrads(:,:,i), input.nitems, net.srcembed));
+            internal.wvec{i}' * ...
+            sparse(reshape(srcemb_inputgrads(:,:,i), input.nitems, net.srcembed));
     end
     
     wantfeatures_grads = joinlayer_outputgrads(:,(net.srcjoin+1):end);

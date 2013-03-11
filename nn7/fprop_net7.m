@@ -7,15 +7,18 @@ function [output, internal] = fprop_net7(net, input, W, prediction_mode)
     end
     
     srcembed = zeros(input.nitems, net.srcembed, net.srcngsize);
+    xwvec = cell(net.srcngsize);
     for i = 1:net.srcngsize
         wvec = net.srcwvecs(input.src(:,i),:);
         if net.srcwvec_bias
-            wvec = addbias(wvec);
+            xwvec{i} = addbias(wvec);
+        else
+            xwvec{i} = wvec;
         end
         if ~prediction_mode && isfield(net, 'dropout_src')
-            wvec(drop,:) = 0;
+            xwvec{i}(drop,:) = 0;
         end
-        srcembed(:,:,i) = wvec * W.srcembed;
+        srcembed(:,:,i) = xwvec{i} * W.srcembed;
     end
     srcembed(:) = net.transfer.srcembed.f(srcembed(:));
 
@@ -44,7 +47,7 @@ function [output, internal] = fprop_net7(net, input, W, prediction_mode)
     output = softmax(addbias([input.nada, hidden]) * W.hidout, 'addcategory'); 
 
     internal = struct('Lhid', Lhid, 'Lres', Lres, 'wLres', wLres, ...
-        'srcembed', srcembed, 'Ahid1', Ahid1, 'Ahid2', Ahid2, 'join', join, ...
+        'wvec', {xwvec}, 'srcembed', srcembed, 'Ahid1', Ahid1, 'Ahid2', Ahid2, 'join', join, ...
         'hidden', hidden);
 end
 
