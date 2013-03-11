@@ -53,6 +53,7 @@ function [best_weights, trainerr, valerr, best_valerr] = nnopt_net7(id, net, inp
         
         err = 0;
         for j = 1:nbatch
+            fprintf('.');
             thisperm = batchperm(j, batchperm(j,:) > 0);
             batchinput = create_batch_net7(input, thisperm);
             W = weightstruct_net7(net, weights);
@@ -126,7 +127,7 @@ function [best_weights, trainerr, valerr, best_valerr] = nnopt_net7(id, net, inp
             best_valerr = valerr(i);
             best_weights = weights;
         end
-        fprintf('%d (%g): Training error: %g, validation error: %g\n', i, alpha, trainerr(i), valerr(i));
+        fprintf('\n%d (%g): Training error: %g, validation error: %g\n', i, alpha, trainerr(i), valerr(i));
 % 
 %         if i > 10 && min(valerr(i-9:i)) > best_valerr
 %             alpha = alpha / 2;
