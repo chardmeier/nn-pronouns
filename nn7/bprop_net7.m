@@ -24,11 +24,11 @@ function G = bprop_net7(net, input, internal, output, W)
     srcemb_inputgrads = net.transfer.srcembed.df(internal.srcembed) .* ...
         reshape(srcemblayer_outputgrads, input.nitems, net.srcembed, net.srcngsize);
 
-    G.srcembed = sparse(net.srcwvec + net.srcwvec_bias, net.srcembed);
+    G.srcembed = zeros(net.srcwvec + net.srcwvec_bias, net.srcembed);
     for i = 1:net.srcngsize
         G.srcembed = G.srcembed + ...
             internal.wvec{i}' * ...
-            sparse(reshape(srcemb_inputgrads(:,:,i), input.nitems, net.srcembed));
+            reshape(srcemb_inputgrads(:,:,i), input.nitems, net.srcembed);
     end
     
     wantfeatures_grads = joinlayer_outputgrads(:,(net.srcjoin+1):end);
@@ -39,7 +39,7 @@ function G = bprop_net7(net, input, internal, output, W)
     
     Ahid1_inputgrads = net.transfer.Ahid1.df(internal.Ahid1) .* ...
         (Ahid2_inputgrads * W.Ahid1Ahid2(2:end,:)');
-    G.antembed = addbias(input.ant)' * sparse(Ahid1_inputgrads);
+    G.antembed = addbias(input.ant)' * Ahid1_inputgrads;
     
     % Ares logistic layer
 %     Ares_inputgrads = internal.Ares .* (1 - internal.Ares) .* ...

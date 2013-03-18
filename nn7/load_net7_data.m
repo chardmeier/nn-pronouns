@@ -19,17 +19,21 @@ function [input, vocab] = load_net7_data(dataprefix, trainidx, validx, testidx)
     vocab.tgtvoc = r{1};
     fclose(id);
     
-    vocab.srcsingle = load(inpfile('srcsingle'));
-    vocab.tgtsingle = load(inpfile('tgtsingle'));
+    %vocab.srcsingle = load(inpfile('srcsingle'));
+    %vocab.tgtsingle = load(inpfile('tgtsingle'));
+    vocab.srcsingle = [];
+    vocab.tgtsingle = [];
         
     vocab.srcngsize = 7;
 
     % Thresholding saves massive amounts of memory
     ssrcwvecs = load(inpfile('srcwvecs'));
-    vocab.srcwvecs = spconvert([ssrcwvecs(ssrcwvecs(:,3) > .01,:); 1 length(vocab.srcvoc) 0]);
+    vocab.srcwvecs = full(spconvert(ssrcwvecs));
+    %vocab.srcwvecs = spconvert([ssrcwvecs(ssrcwvecs(:,3) > .01,:)]);
     
     santwvecs = load(inpfile('tgtwvecs'));
-    vocab.antwvecs = spconvert([santwvecs(santwvecs(:,3) > .01,:); 1 length(vocab.tgtvoc) 0]);
+    vocab.antwvecs = full(spconvert(santwvecs));
+    %vocab.antwvecs = spconvert([santwvecs(santwvecs(:,3) > .01,:)]);
     
     allsrc = load(inpfile('src'));
     
