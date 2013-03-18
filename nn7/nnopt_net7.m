@@ -62,12 +62,12 @@ function [best_weights, trainerr, valerr, best_valerr] = nnopt_net7(id, net, inp
             grad = togpu(weightvector_net7(G));
             err = err - sum(sum(batchinput.targets .* log(max(tiny, output)))) / input.nitems;
             
-            grad = (grad > 1e-5) .* grad; % conserve sparsity
+            %grad = (grad > 1e-5) .* grad; % conserve sparsity
             if isfield(net, 'regulariser') && net.regulariser > 0
                 grad = grad + net.regulariser * gweights;
             end
             if isfield(net, 'l1regulariser') && net.l1regulariser > 0
-                grad = grad + net.l1regulariser * gweights;
+                grad = grad + net.l1regulariser * sign(gweights);
             end
             
             rms = 0.9 * rms + 0.1 * grad .^ 2;
