@@ -5,13 +5,13 @@ function [best_fweights, trainerr, valerr, best_bweights] = train_dae(id, input,
     nsteps = 100;
     stddev = .01;
     momentum = 0.9;
-    alpha = .0005;
+    alpha = .001;
     alphadecay = 1;
     batchsize = 30;
     adjust_rate = true;
     early_stopping = true;
     noise_threshold = .5;
-    l2regulariser = 1e-3;
+    l2regulariser = 1e-4;
     
     nitems = size(input, 1);
     nvis = size(input, 2);
