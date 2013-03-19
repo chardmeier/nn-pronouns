@@ -5,32 +5,38 @@ function [best_fweights, trainerr, valerr, best_bweights] = train_dae(id, input,
     nsteps = 100;
     stddev = .01;
     momentum = 0.9;
-    alpha = .0005;
+    alpha = .001;
     alphadecay = 1;
-    batchsize = 30;
+    batchsize = 50;
     adjust_rate = true;
     early_stopping = true;
     noise_threshold = .5;
     l2regulariser = 1e-3;
     
+    F = @tanh;
+    DF = @(x) (1 - x .^ 2);
+
     nitems = size(input, 1);
     nvis = size(input, 2);
     
     if exist('gpuDeviceCount', 'file') && gpuDeviceCount >= 1
         gpu = gpuDevice;
         if gpu.DeviceSupported
-            togpu = @gpuArray;
-            fromgpu = @gather;
-            gpurand = @gpuArray.rand;
+            togpu = @(x) gpuArray(single(x));
+            fromgpu = @(x) double(gather(x));
+            gpurand = @(varargin) gpuArray.rand(varargin{:}, 'single');
+            gpuones = @(varargin) gpuArray.ones(varargin{:}, 'single');
         else
             togpu = @double;
             fromgpu = @double;
             gpurand = @rand;
+            gpuones = @(varargin) ones(varargin{:});
         end
     else
         togpu = @double;
         fromgpu = @double;
         gpurand = @rand;
+        gpuones = @(varargin) ones(varargin{:});
     end
     
     val = togpu(cval);
@@ -76,18 +82,21 @@ function [best_fweights, trainerr, valerr, best_bweights] = train_dae(id, input,
             thisperm = batchperm(j, batchperm(j,:) > 0);
             batchinput = togpu(input(thisperm,:));
             
-            noisyinput = (gpurand(size(batchinput)) < noise_threshold) .* batchinput;
+            noisyinput = gpuones(batchsize, nvis + 1);
+            noisyinput(:,2:end) = (gpurand(size(batchinput)) < noise_threshold) .* batchinput;
             
             % Forward propagation
-            hidden = sigmoid(addbias(noisyinput) * fweights);
-            output = sigmoid(addbias(hidden) * bweights);
+            hidden = gpuones(batchsize, nhidden + 1);
+            hidden(:,2:end) = F(noisyinput * fweights);
+            output = F(hidden * bweights);
             
             % Backpropagation
             error = output - batchinput;
-            bgrads = addbias(hidden)' * error;
-            fgrads = addbias(noisyinput)' * (hidden .* (1 - hidden) .* (error * bweights(2:end,:)'));
+            bgrads = hidden' * error;
+            fgrads = noisyinput' * (DF(hidden(:,2:end)) .* (error * bweights(2:end,:)'));
 
-            err = err - sum(sum(batchinput .* log(max(tiny, output)))) / nitems;
+            %err = err - sum(sum(batchinput .* log(max(tiny, output)))) / nitems;
+            err = err + sum(sum(error .^ 2)) / nitems;
             
             fgrads(2:end,:) = fgrads(2:end,:) + l2regulariser * fweights(2:end,:);
             bgrads(2:end,:) = bgrads(2:end,:) + l2regulariser * bweights(2:end,:);
@@ -117,7 +126,7 @@ function [best_fweights, trainerr, valerr, best_bweights] = train_dae(id, input,
             fprev_grad = fgrads;
             bprev_grad = bgrads;
         end
-        trainerr(i) = err;
+        trainerr(i) = fromgpu(err);
         if adjust_rate && i > 6 && sum(diff(trainerr((i-6):(i-1))) > 0) > 2 && alphachange_steps > 5
             %alpha = alpha / 2;
             alpha = alpha * .8;
@@ -138,10 +147,11 @@ function [best_fweights, trainerr, valerr, best_bweights] = train_dae(id, input,
         alphachange_steps = alphachange_steps + 1;
         
         noisyinput = (gpurand(size(val)) < noise_threshold) .* val;
-        hidden = sigmoid(addbias(noisyinput) * fweights);
-        valout = sigmoid(addbias(hidden) * bweights);
+        hidden = F(addbias(noisyinput) * fweights);
+        valout = F(addbias(hidden) * bweights);
 
-        valerr(i) = -sum(sum(val .* log(max(tiny, valout)))) / size(val, 1);
+        %valerr(i) = fromgpu(-sum(sum(val .* log(max(tiny, valout)))) / size(val, 1));
+        valerr(i) = fromgpu(sum(sum((valout - val) .^ 2))) / size(val, 1);
         if(valerr(i) < best_valerr)
             best_valerr = valerr(i);
             best_fweights = fromgpu(fweights);
@@ -154,7 +164,7 @@ function [best_fweights, trainerr, valerr, best_bweights] = train_dae(id, input,
         end
         
         if mod(i, 10) == 0
-            save(sprintf('dae-%s.%d.mat', id, i));
+            save(sprintf('dae-%s.%d.mat', id, i), '-v7.3');
         end
     end
     
