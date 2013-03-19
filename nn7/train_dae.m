@@ -1,20 +1,21 @@
-function [best_fweights, trainerr, valerr, best_bweights] = train_dae(id, input, cval, nhidden)
+function [best_fweights, trainerr, valerr, best_bweights] = train_dae(id, input, cval, nhidden, params)
 %UNTITLED7 Summary of this function goes here
 %   Detailed explanation goes here
 
-    nsteps = 100;
-    stddev = .01;
-    momentum = 0.9;
-    alpha = .001;
-    alphadecay = 1;
-    batchsize = 50;
-    adjust_rate = true;
-    early_stopping = true;
-    noise_threshold = .5;
-    l2regulariser = 1e-4;
+    nsteps = params.nsteps;
+    stddev = params.stddev;
+    momentum = params.momentum;
+    alpha = params.alpha;
+    alphadecay = params.alphadecay;
+    batchsize = params.batchsize;
+    adjust_rate = params.adjust_rate;
+    early_stopping = params.early_stopping;
+    noise_threshold = params.noise_threshold;
+    l2regulariser = params.l2regulariser;
     
-    F = @tanh;
-    DF = @(x) (1 - x .^ 2);
+    F1 = params.F1;
+    DF1 = params.DF1;
+    F2 = params.F2;
 
     nitems = size(input, 1);
     nvis = size(input, 2);
@@ -80,20 +81,21 @@ function [best_fweights, trainerr, valerr, best_bweights] = train_dae(id, input,
                 fprintf('.');
             end
             thisperm = batchperm(j, batchperm(j,:) > 0);
+            currentsize = length(thisperm);
             batchinput = togpu(input(thisperm,:));
             
-            noisyinput = gpuones(batchsize, nvis + 1);
+            noisyinput = gpuones(currentsize, nvis + 1);
             noisyinput(:,2:end) = (gpurand(size(batchinput)) < noise_threshold) .* batchinput;
             
             % Forward propagation
-            hidden = gpuones(batchsize, nhidden + 1);
-            hidden(:,2:end) = F(noisyinput * fweights);
-            output = F(hidden * bweights);
+            hidden = gpuones(currentsize, nhidden + 1);
+            hidden(:,2:end) = F1(noisyinput * fweights);
+            output = F2(hidden * bweights);
             
             % Backpropagation
             error = output - batchinput;
             bgrads = hidden' * error;
-            fgrads = noisyinput' * (DF(hidden(:,2:end)) .* (error * bweights(2:end,:)'));
+            fgrads = noisyinput' * (DF1(hidden(:,2:end)) .* (error * bweights(2:end,:)'));
 
             %err = err - sum(sum(batchinput .* log(max(tiny, output)))) / nitems;
             err = err + sum(sum(error .^ 2)) / nitems;
@@ -147,8 +149,8 @@ function [best_fweights, trainerr, valerr, best_bweights] = train_dae(id, input,
         alphachange_steps = alphachange_steps + 1;
         
         noisyinput = (gpurand(size(val)) < noise_threshold) .* val;
-        hidden = F(addbias(noisyinput) * fweights);
-        valout = F(addbias(hidden) * bweights);
+        hidden = F1(addbias(noisyinput) * fweights);
+        valout = F2(addbias(hidden) * bweights);
 
         %valerr(i) = fromgpu(-sum(sum(val .* log(max(tiny, valout)))) / size(val, 1));
         valerr(i) = fromgpu(sum(sum((valout - val) .^ 2))) / size(val, 1);
