@@ -23,7 +23,7 @@ function net = setup_net7(srcembed, srcjoin, Ahid1, Ahid2, Lhid, hidden, output,
     net.hidden = hidden;
     net.output = output;
 
-    net.srcwvec_bias = 0;
+    net.srcwvec_bias = 1;
     net.sample_antfeatures = 0;
     
     net.srcvoc = vocab.srcvoc;
@@ -33,10 +33,13 @@ function net = setup_net7(srcembed, srcjoin, Ahid1, Ahid2, Lhid, hidden, output,
     net.srcwvecs = vocab.srcwvecs;
     net.antwvecs = vocab.antwvecs;
     
+    net.srcprons = length(vocab.srcprons);
     net.srcngsize = vocab.srcngsize;
     
+    net.regulariser = 1e-3;
+    
     net.nweights = (net.srcwvec + net.srcwvec_bias) * net.srcembed + ...
-        (net.srcngsize * net.srcembed + 1) * net.srcjoin + ...
+        (net.srcprons + net.srcngsize * net.srcembed + 1) * net.srcjoin + ...
         (net.link + 1) * net.Lhid + (net.Lhid + 1) * 1 + ...
         (net.antwvec + 1) * net.Ahid1 + (net.Ahid1 + 1) * net.Ahid2 + ...
         (net.srcjoin + net.Ahid2 + 2) * net.hidden + (net.hidden + 2) * (net.output - 1);

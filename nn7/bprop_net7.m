@@ -18,11 +18,11 @@ function G = bprop_net7(net, input, internal, output, W)
     joinlayer_outputgrads = hidlayer_inputgrads * W.joinhid(3:end,:)';
     
     srcjoin_inputgrads = net.transfer.srcjoin.df(internal.join(:,1:net.srcjoin)) .* joinlayer_outputgrads(:,1:net.srcjoin);
-    G.srcembjoin = addbias(reshape(internal.srcembed, input.nitems, net.srcembed * net.srcngsize))' * srcjoin_inputgrads;
+    G.srcembjoin = addbias(internal.srcembcomplete)' * srcjoin_inputgrads;
     srcemblayer_outputgrads = srcjoin_inputgrads * W.srcembjoin(2:end,:)';
     
     srcemb_inputgrads = net.transfer.srcembed.df(internal.srcembed) .* ...
-        reshape(srcemblayer_outputgrads, input.nitems, net.srcembed, net.srcngsize);
+        reshape(srcemblayer_outputgrads(:,(net.srcprons+1):end), input.nitems, net.srcembed, net.srcngsize);
 
     G.srcembed = zeros(net.srcwvec + net.srcwvec_bias, net.srcembed);
     for i = 1:net.srcngsize
