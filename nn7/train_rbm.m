@@ -9,9 +9,14 @@ function weights = train_rbm(id, data, val, nhid)
     alpha = .0005;
     %alpha = 1e-5;
     stddev = .01;
-    batchsize = 50;
-    nsteps = 10;
+    batchsize = 20;
+    nsteps = 4;
     momentum = .9;
+    l2regulariser = .001;
+    
+    sparsity_target = 0.1;
+    sparsity_decay = 0.95;
+    sparsity_cost = .001;
     
     ndata = size(data, 1);
     nvis = size(data, 2);
@@ -23,6 +28,9 @@ function weights = train_rbm(id, data, val, nhid)
     weights = stddev * randn(nvis + 1, nhid + 1);
     datap = mean(data, 1);
     weights(:,1) = [0; log(datap ./ (1 - datap) + tiny)'];
+    weights(1,2:end) = log(sparsity_target / (1 - sparsity_target));
+    
+    sparsity_q = sparsity_target;
     
     bias = ones(batchsize, 1);
     weight_change = zeros(size(weights));
@@ -49,7 +57,11 @@ function weights = train_rbm(id, data, val, nhid)
             hid2 = sigmoid([bias, vis2] * weights(:,2:end));
 
             grads = ([bias,batch]' * [bias,phid1] - [bias,vis2]' * [bias,hid2]) / batchsize;
-            grads(2:end,2:end) = grads(2:end,2:end) - .0001 * weights(2:end,2:end);
+            grads(2:end,2:end) = grads(2:end,2:end) - l2regulariser * weights(2:end,2:end);
+            
+            current_sparsity = mean([phid1(:); hid2(:)]);
+            sparsity_q = sparsity_decay * sparsity_q + (1 - sparsity_decay) * current_sparsity;
+            grads(:,2:end) = grads(:,2:end) - sparsity_cost * (sparsity_q - sparsity_target);
             
             rms = 0.9 * rms + 0.1 * grads .^ 2;
             grads = grads ./ sqrt(rms + tiny);

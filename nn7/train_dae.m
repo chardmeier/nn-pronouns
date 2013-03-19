@@ -11,7 +11,7 @@ function [best_fweights, trainerr, valerr, best_bweights] = train_dae(id, input,
     adjust_rate = true;
     early_stopping = true;
     noise_threshold = .5;
-    l2regulariser = 1e-3;
+    l2regulariser = 1e-4;
     
     F = @tanh;
     DF = @(x) (1 - x .^ 2);

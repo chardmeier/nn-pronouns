@@ -19,19 +19,23 @@ function [input, vocab] = load_net7_data(dataprefix, trainidx, validx, testidx)
     vocab.tgtvoc = r{1};
     fclose(id);
     
-    vocab.srcsingle = load(inpfile('srcsingle'));
-    vocab.tgtsingle = load(inpfile('tgtsingle'));
-        
-    vocab.srcngsize = 7;
+    %vocab.srcsingle = load(inpfile('srcsingle'));
+    %vocab.tgtsingle = load(inpfile('tgtsingle'));
+    vocab.srcsingle = [];
+    vocab.tgtsingle = [];
 
-    % Thresholding saves massive amounts of memory
     ssrcwvecs = load(inpfile('srcwvecs'));
-    vocab.srcwvecs = spconvert([ssrcwvecs(ssrcwvecs(:,3) > .01,:); 1 length(vocab.srcvoc) 0]);
+    vocab.srcwvecs = full(spconvert(ssrcwvecs));
     
     santwvecs = load(inpfile('tgtwvecs'));
-    vocab.antwvecs = spconvert([santwvecs(santwvecs(:,3) > .01,:); 1 length(vocab.tgtvoc) 0]);
-    
-    allsrc = load(inpfile('src'));
+    vocab.antwvecs = full(spconvert(santwvecs));
+
+    vocab.srcngsize = 6;
+    rawsrc = load(inpfile('src'));
+    % Special treatment for the actual pronoun
+    allsrc = rawsrc(:,[1:3 5:7]);
+    vocab.srcprons = unique(rawsrc(:,4));
+    [~,allsrcprons] = ismember(rawsrc(:,4), vocab.srcprons);
     
     antdata = load(inpfile('ant'));
     antwordmatrix = sparse(antdata(:,1), antdata(:,2), 1, max(antdata(:,1)), size(vocab.antwvecs, 1));
@@ -60,6 +64,7 @@ function [input, vocab] = load_net7_data(dataprefix, trainidx, validx, testidx)
     
     input.nitems = length(trainidx);
     input.src = allsrc(trainidx,:);
+    input.srcprons = allsrcprons(trainidx,:);
     input.ant = allant(trainant,:);
     input.link = alllink(trainant,vocab.activelinkfeat);
     input.nada = allnada(trainidx);
@@ -70,6 +75,7 @@ function [input, vocab] = load_net7_data(dataprefix, trainidx, validx, testidx)
     input.val = struct();
     input.val.nitems = length(validx);
     input.val.src = allsrc(validx,:);
+    input.val.srcprons = allsrcprons(validx,:);
     input.val.ant = allant(valant,:);
     input.val.link = alllink(valant,vocab.activelinkfeat);
     input.val.targets = alltargets(validx,:);
@@ -80,6 +86,7 @@ function [input, vocab] = load_net7_data(dataprefix, trainidx, validx, testidx)
     input.test = struct();
     input.test.nitems = length(testidx);
     input.test.src = allsrc(testidx,:);
+    input.test.srcprons = allsrcprons(testidx,:);
     input.test.ant = allant(testant,:);
     input.test.link = alllink(testant,vocab.activelinkfeat);
     input.test.nada = allnada(testidx);

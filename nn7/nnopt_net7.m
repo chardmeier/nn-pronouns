@@ -48,12 +48,15 @@ function [best_weights, trainerr, valerr, best_valerr] = nnopt_net7(id, net, inp
     alphachange_steps = 0;
     tiny = 1e-30;
     indices = [1:input.nitems, zeros(1, npad)];
+    dotstep = floor(nbatch / 80);
     for i = 1:params.nsteps
         batchperm = reshape(indices(randperm(numel(indices))), nbatch, batchsize);
         
         err = 0;
         for j = 1:nbatch
-            fprintf('.');
+            if mod(j, dotstep) == 0
+                fprintf('.');
+            end
             thisperm = batchperm(j, batchperm(j,:) > 0);
             batchinput = create_batch_net7(input, thisperm);
             W = weightstruct_net7(net, weights);
@@ -62,12 +65,12 @@ function [best_weights, trainerr, valerr, best_valerr] = nnopt_net7(id, net, inp
             grad = togpu(weightvector_net7(G));
             err = err - sum(sum(batchinput.targets .* log(max(tiny, output)))) / input.nitems;
             
-            grad = (grad > 1e-5) .* grad; % conserve sparsity
+            %grad = (grad > 1e-5) .* grad; % conserve sparsity
             if isfield(net, 'regulariser') && net.regulariser > 0
                 grad = grad + net.regulariser * gweights;
             end
             if isfield(net, 'l1regulariser') && net.l1regulariser > 0
-                grad = grad + net.l1regulariser * gweights;
+                grad = grad + net.l1regulariser * sign(gweights);
             end
             
             rms = 0.9 * rms + 0.1 * grad .^ 2;
@@ -139,7 +142,7 @@ function [best_weights, trainerr, valerr, best_valerr] = nnopt_net7(id, net, inp
         end
         
         if mod(i, 10) == 0
-            save(sprintf('nn7-%s.%d.mat', id, i));
+            save(sprintf('nn7-%s.%d.mat', id, i), 'best_weights', 'trainerr', 'valerr', '-v7.3');
         end
     end
     

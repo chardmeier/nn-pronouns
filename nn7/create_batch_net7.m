@@ -7,6 +7,7 @@ function batch = create_batch_net7(input, batchperm)
     batch = struct();
     batch.nitems = length(batchperm);
     batch.src = input.src(batchperm,:);
+    batch.srcprons = input.srcprons(batchperm,:);
     batch.ant = input.ant(batchant,:);
     batch.link = input.link(batchant,:);
     batch.targets = input.targets(batchperm,:);
