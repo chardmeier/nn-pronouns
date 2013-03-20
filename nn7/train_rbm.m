@@ -1,22 +1,44 @@
-function weights = train_rbm(id, data, val, nhid)
+function cweights = train_rbm(id, data, val, nhid, params)
 %UNTITLED Summary of this function goes here
 %   Detailed explanation goes here
 
+    if params.use_gpu && exist('gpuDeviceCount', 'file') && gpuDeviceCount >= 1
+        gpu = gpuDevice;
+        if gpu.DeviceSupported
+            togpu = @(x) gpuArray(single(x));
+            fromgpu = @(x) double(gather(x));
+            gpurand = @(varargin) gpuArray.rand(varargin{:}, 'single');
+            gpuones = @(varargin) gpuArray.ones(varargin{:}, 'single');
+            gpuzeros = @(varargin) gpuArray.zeros(varargin{:}, 'single');
+        else
+            togpu = @double;
+            fromgpu = @double;
+            gpurand = @rand;
+            gpuones = @(varargin) ones(varargin{:});
+            gpuzeros = @(varargin) zeros(varargin{:});
+        end
+    else
+        togpu = @double;
+        fromgpu = @double;
+        gpurand = @rand;
+        gpuones = @(varargin) ones(varargin{:});
+        gpuzeros = @(varargin) zeros(varargin{:});
+    end
+    
     function S = sample_bernoulli(P)
         S = rand(size(P)) < P;
     end
 
-    alpha = .0005;
-    %alpha = 1e-5;
-    stddev = .01;
-    batchsize = 20;
-    nsteps = 4;
-    momentum = .9;
-    l2regulariser = .001;
+    alpha = params.alpha;
+    stddev = params.stddev;
+    batchsize = params.batchsize;
+    nsteps = params.nsteps;
+    momentum = params.momentum;
+    l2regulariser = params.l2regulariser;
     
-    sparsity_target = 0.1;
-    sparsity_decay = 0.95;
-    sparsity_cost = .001;
+    sparsity_target = params.sparsity_target;
+    sparsity_decay = params.sparsity_decay;
+    sparsity_cost = params.sparsity_cost;
     
     ndata = size(data, 1);
     nvis = size(data, 2);
@@ -25,21 +47,21 @@ function weights = train_rbm(id, data, val, nhid)
     
     tiny = 1e-30;
     
-    weights = stddev * randn(nvis + 1, nhid + 1);
+    weights = togpu(stddev * randn(nvis + 1, nhid + 1));
     datap = mean(data, 1);
     weights(:,1) = [0; log(datap ./ (1 - datap) + tiny)'];
     weights(1,2:end) = log(sparsity_target / (1 - sparsity_target));
     
     sparsity_q = sparsity_target;
     
-    bias = ones(batchsize, 1);
-    weight_change = zeros(size(weights));
-    rms = ones(size(weights));
+    bias = gpuones(batchsize, 1);
+    weight_change = gpuzeros(size(weights));
+    rms = gpuones(size(weights));
     %gain = ones(size(weights));
     
     nvalsub = min(size(val, 1), 100);
-    testsubset = data(1:nvalsub,:);
-    valsub = val(1:nvalsub,:);
+    testsubset = togpu(data(1:nvalsub,:));
+    valsub = togpu(val(1:nvalsub,:));
     
     nupdates = 0;
     for i = 1:nsteps
@@ -47,7 +69,7 @@ function weights = train_rbm(id, data, val, nhid)
         
         for j = 1:batches_per_epoch
             batchperm = randperm(ndata, batchsize);
-            batch = data(batchperm,:);
+            batch = togpu(data(batchperm,:));
 
             %batch = (rand(size(batch)) < 0.5) .* batch;
 
@@ -75,28 +97,33 @@ function weights = train_rbm(id, data, val, nhid)
             
             nupdates = nupdates + 1;
             
-            fprintf('.');
-            if mod(nupdates, 50) == 0
-                fprintf('%d\n', nupdates);
-            end
+            %fprintf('.');
+            %if mod(nupdates, 50) == 0
+                %fprintf('%d\n', nupdates);
+            %end
             
-            if mod(nupdates, 300) == 0
+            if mod(nupdates, 600) == 0
+                trainerr = sum(sum((batch - vis2) .^ 2)) / batchsize;
+
                 hid1 = sample_bernoulli(sigmoid(addbias(valsub) * weights(:,2:end)));
                 vis2 = sigmoid(addbias(hid1) * weights(2:end,:)');
-                err = sum(sum((valsub - vis2) .^ 2)) / ndata;
+                valerr = sum(sum((valsub - vis2) .^ 2)) / nvalsub;
                 
-                figure(1), clf, hist(weights(:),30);
-                figure(2), clf, hist(weight_change(:),30);
+		cw = fromgpu(weights(2:end,2:end));
+		cwc = fromgpu(weight_change(2:end,2:end));
+                figure(1), clf, hist(cw(:),30);
+                figure(2), clf, hist(cwc(:),30);
                 Ftest = -sum(testsubset * weights(2:end,1)) - ...
                     sum(sum(log1p(exp(addbias(testsubset) * weights(:,2:end)))));
                 Fval = -sum(valsub * weights(2:end,1)) - ...
                     sum(sum(log1p(exp(addbias(valsub) * weights(:,2:end)))));
                 
-                fprintf('%d.%d: err = %g, |grad| = %f, |W| = %f, gap = %g\n', ...
-                    i, j, err, norm(grads, 'fro'), norm(weights, 'fro'), Ftest - Fval);
+                fprintf('%d.%d: trainerr = %g, valerr = %g, |grad| = %f, |W| = %f, gap = %g\n', ...
+                    i, j, trainerr, valerr, norm(grads, 'fro'), norm(weights, 'fro'), Ftest - Fval);
             end
         end
-        save(sprintf('rbm-%s.%d.mat', id, i));
+        cweights = fromgpu(weights);
+        save(sprintf('rbm-%s.%d.mat', id, i), 'cweights');
     end
 end
 
