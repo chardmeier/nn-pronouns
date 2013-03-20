@@ -2,20 +2,40 @@ function [output, internal] = fprop_net7(net, input, W, prediction_mode)
 %UNTITLED2 Summary of this function goes here
 %   Detailed explanation goes here
 
+    if nargin < 3 || nargin > 5
+        error('Wrong number of parameters for fprop_net7.');
+    end
+    net = varargin{1};
+    input = varargin{2};
+    W = varargin{3};
+    if nargin > 3
+        prediction_mode = varargin{4};
+    else
+        prediction_mode = true;
+    end
+    if nargin > 4
+        config = varargin{5};
+    else
+        config = struct('togpu', @double, 'gpuzeros', @zeros);
+    end
+    
+    togpu = config.togpu;
+    gpuzeros = config.gpuzeros;
+    
     if ~prediction_mode && isfield(net, 'dropout_src')
         drop = randperm(input.nitems, round(net.dropout_src * input.nitems));
     else
         drop = [];
     end
     
-    srcembed = zeros(input.nitems, net.srcembed, net.srcngsize);
+    srcembed = gpuzeros(input.nitems, net.srcembed, net.srcngsize);
     xwvec = cell(net.srcngsize);
     for i = 1:net.srcngsize
         wvec = net.srcwvecs(input.src(:,i),:);
         if net.srcwvec_bias
-            xwvec{i} = addbias(wvec);
+            xwvec{i} = togpu(addbias(wvec));
         else
-            xwvec{i} = wvec;
+            xwvec{i} = togpu(wvec);
         end
         xwvec{i}(drop,:) = 0;
         srcembed(:,:,i) = xwvec{i} * W.srcembed;

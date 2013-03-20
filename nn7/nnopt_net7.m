@@ -7,14 +7,19 @@ function [best_weights, trainerr, valerr, best_valerr] = nnopt_net7(id, net, inp
         if gpu.DeviceSupported
             togpu = @gpuArray;
             fromgpu = @gather;
+            gpuzeros = @gpuArray.zeros;
         else
             togpu = @double;
             fromgpu = @double;
+            gpuzeros = @zeros;
         end
     else
         togpu = @double;
         fromgpu = @double;
+        gpuzeros = @zeros;
     end
+    
+    config = struct('fromgpu', fromgpu, 'togpu', togpu, 'gpuzeros', gpuzeros);
     
     momentum = params.momentum;
     alpha = params.initialrate;
@@ -60,8 +65,8 @@ function [best_weights, trainerr, valerr, best_valerr] = nnopt_net7(id, net, inp
             thisperm = batchperm(j, batchperm(j,:) > 0);
             batchinput = create_batch_net7(input, thisperm);
             W = weightstruct_net7(net, weights);
-            [output,hidden] = fprop_net7(net, batchinput, W, false);
-            G = bprop_net7(net, batchinput, hidden, output, W);
+            [output,hidden] = fprop_net7(net, batchinput, W, false, config);
+            G = bprop_net7(net, batchinput, hidden, output, W, config);
             grad = togpu(weightvector_net7(G));
             err = err - sum(sum(batchinput.targets .* log(max(tiny, output)))) / input.nitems;
             
@@ -123,7 +128,7 @@ function [best_weights, trainerr, valerr, best_valerr] = nnopt_net7(id, net, inp
         alphachange_steps = alphachange_steps + 1;
         
         W = weightstruct_net7(net, weights);
-        valout = fprop_net7(net, input.val, W, true);
+        valout = fprop_net7(net, input.val, W, true, config);
 
         valerr(i) = -sum(sum(input.val.targets .* log(max(tiny, valout)))) / input.val.nitems;
         if(valerr(i) < best_valerr)

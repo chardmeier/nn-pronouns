@@ -1,14 +1,17 @@
-function G = bprop_net7(net, input, internal, output, W)
+function G = bprop_net7(net, input, internal, output, W, config)
 %UNTITLED4 Summary of this function goes here
 %   Detailed explanation goes here
 
+    togpu = config.togpu;
+    fromgpu = config.fromgpu;
+    
     G = struct();
 
     % The last output of the softmax is unconnected
     output = output(:,1:end-1);
     targets = input.targets(:,1:end-1);
 
-    outlayer_inputgrads = output - targets;
+    outlayer_inputgrads = togpu(output - targets);
     
     G.hidout = addbias([input.nada, internal.hidden])' * outlayer_inputgrads;
     hidlayer_inputgrads = net.transfer.hidden.df(internal.hidden) .* ...
