@@ -1,4 +1,4 @@
-function [best_fweights, trainerr, valerr, best_bweights] = train_dae(id, input, cval, nhidden, params)
+function [best_fweights, trainerr, valerr, best_bweights] = train_dae(id, input, val, nhidden, params)
 %UNTITLED7 Summary of this function goes here
 %   Detailed explanation goes here
 
@@ -20,7 +20,7 @@ function [best_fweights, trainerr, valerr, best_bweights] = train_dae(id, input,
     nitems = size(input, 1);
     nvis = size(input, 2);
     
-    if exist('gpuDeviceCount', 'file') && gpuDeviceCount >= 1
+    if params.use_gpu && exist('gpuDeviceCount', 'file') && gpuDeviceCount >= 1
         gpu = gpuDevice;
         if gpu.DeviceSupported
             togpu = @(x) gpuArray(single(x));
@@ -39,8 +39,6 @@ function [best_fweights, trainerr, valerr, best_bweights] = train_dae(id, input,
         gpurand = @rand;
         gpuones = @(varargin) ones(varargin{:});
     end
-    
-    val = togpu(cval);
     
     if mod(nitems, batchsize) > 0
         npad = batchsize - mod(nitems, batchsize);
@@ -148,16 +146,19 @@ function [best_fweights, trainerr, valerr, best_bweights] = train_dae(id, input,
         
         alphachange_steps = alphachange_steps + 1;
         
-        noisyinput = (gpurand(size(val)) < noise_threshold) .* val;
-        hidden = F1(addbias(noisyinput) * fweights);
-        valout = F2(addbias(hidden) * bweights);
+        cfweights = fromgpu(fweights);
+        cbweights = fromgpu(bweights);
+
+        noisyinput = (rand(size(val)) < noise_threshold) .* val;
+        valhidden = F1(addbias(noisyinput) * cfweights);
+        valout = F2(addbias(valhidden) * cbweights);
 
         %valerr(i) = fromgpu(-sum(sum(val .* log(max(tiny, valout)))) / size(val, 1));
-        valerr(i) = fromgpu(sum(sum((valout - val) .^ 2))) / size(val, 1);
+        valerr(i) = sum(sum((valout - val) .^ 2)) / size(val, 1);
         if(valerr(i) < best_valerr)
             best_valerr = valerr(i);
-            best_fweights = fromgpu(fweights);
-            best_bweights = fromgpu(bweights);
+            best_fweights = cfweights;
+            best_bweights = cbweights;
         end
         fprintf('\n%d (%g): Training error: %g, validation error: %g\n', i, alpha, trainerr(i), valerr(i));
         

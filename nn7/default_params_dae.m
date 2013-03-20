@@ -15,4 +15,6 @@ function params = default_params_dae
     params.F1 = @(x) 1 ./ (1 + exp(-x));
     params.DF1 = @(x) x .* (1 - x);
     params.F2 = @(x) 1 ./ (1 + exp(-x));
+
+    params.use_gpu = false;
 end
