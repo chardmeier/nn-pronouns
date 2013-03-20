@@ -167,7 +167,7 @@ function [best_fweights, trainerr, valerr, best_bweights] = train_dae(id, input,
         end
         
         if mod(i, 10) == 0
-            save(sprintf('dae-%s.%d.mat', id, i), '-v7.3');
+            save(sprintf('dae-%s.%d.mat', id, i), '-v7.3', 'best_fweights', 'best_bweights');
         end
     end
     
