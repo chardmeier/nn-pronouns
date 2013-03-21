@@ -71,6 +71,10 @@ function [best_weights, trainerr, valerr, best_valerr] = nnopt_net7(id, net, inp
                 fprintf('.');
             end
             thisperm = batchperm(j, batchperm(j,:) > 0);
+            
+            weight_change = momentum * weight_change;
+            gweights = gweights + weight_change;
+            
             batchinput = create_batch_net7(input, thisperm);
             W = weightstruct_net7(net, gweights);
             [output,hidden] = fprop_net7(net, batchinput, W, false, config);
@@ -92,8 +96,9 @@ function [best_weights, trainerr, valerr, best_valerr] = nnopt_net7(id, net, inp
             %grad = sparse(a, 1, x ./ sqrt(rms(a) + tiny), net.nweights, 1);
             grad = grad ./ sqrt(rms + tiny);
             
-            weight_change = momentum * weight_change - alpha * gain .* grad;
-            gweights = gweights + weight_change;
+            correction = -alpha * gain .* grad;
+            gweights = gweights + correction;
+            weight_change = weight_change + correction;
             weights = fromgpu(gweights);
             
             %if isfield(net, 'weightconstraint')
