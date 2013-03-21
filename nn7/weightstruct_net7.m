@@ -9,7 +9,7 @@ function W = weightstruct_net7(net, weights)
 
     idx = 1;
     
-    W.srcembed = extract(net.srcwvec + net.srcwvec_bias, net.srcembed);
+    W.srcembed = extract(net.srcwvec, net.srcembed);
     W.srcembjoin = extract(net.srcprons + net.srcngsize * net.srcembed + 1, net.srcjoin);
     W.linkLhid = extract(net.link + 1, net.Lhid);
     W.LhidLres = extract(net.Lhid + 1, 1);

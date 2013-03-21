@@ -13,7 +13,7 @@ function net = setup_net7(srcembed, srcjoin, Ahid1, Ahid2, Lhid, hidden, output,
         'hidden', logistictransfer);
     
     net.link = sum(vocab.activelinkfeat);
-    net.srcwvec = size(vocab.srcwvecs, 2);
+    net.srcwvec = size(vocab.srcwvecs, 2) + 1; % add bias
     net.antwvec = size(vocab.antwvecs, 2);
     net.srcembed = srcembed;
     net.srcjoin = srcjoin;
@@ -23,14 +23,13 @@ function net = setup_net7(srcembed, srcjoin, Ahid1, Ahid2, Lhid, hidden, output,
     net.hidden = hidden;
     net.output = output;
 
-    net.srcwvec_bias = 1;
     net.sample_antfeatures = 0;
     
     net.srcvoc = vocab.srcvoc;
     net.tgtvoc = vocab.tgtvoc;
     net.srcsingle = vocab.srcsingle;
     net.tgtsingle = vocab.tgtsingle;
-    net.srcwvecs = vocab.srcwvecs;
+    net.srcwvecs = addbias(vocab.srcwvecs);
     net.antwvecs = vocab.antwvecs;
     
     net.srcprons = length(vocab.srcprons);
@@ -38,7 +37,7 @@ function net = setup_net7(srcembed, srcjoin, Ahid1, Ahid2, Lhid, hidden, output,
     
     net.regulariser = 1e-3;
     
-    net.nweights = (net.srcwvec + net.srcwvec_bias) * net.srcembed + ...
+    net.nweights = net.srcwvec * net.srcembed + ...
         (net.srcprons + net.srcngsize * net.srcembed + 1) * net.srcjoin + ...
         (net.link + 1) * net.Lhid + (net.Lhid + 1) * 1 + ...
         (net.antwvec + 1) * net.Ahid1 + (net.Ahid1 + 1) * net.Ahid2 + ...

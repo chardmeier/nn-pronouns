@@ -2,24 +2,32 @@ function [best_weights, trainerr, valerr, best_valerr] = nnopt_net7(id, net, inp
 %UNTITLED7 Summary of this function goes here
 %   Detailed explanation goes here
 
-    if exist('gpuDeviceCount', 'file') && gpuDeviceCount >= 1
+    if params.use_gpu && exist('gpuDeviceCount', 'file') && gpuDeviceCount >= 1
         gpu = gpuDevice;
         if gpu.DeviceSupported
-            togpu = @gpuArray;
-            fromgpu = @gather;
-            gpuzeros = @gpuArray.zeros;
+            togpu = @(x) gpuArray(single(x));
+            fromgpu = @(x) double(gather(x));
+            gpuzeros = @(varargin) gpuArray.zeros(varargin{:}, 'single');
+            gpurand = @(varargin) gpuArray.rand(varargin{:}, 'single');
+            gpucolon = @(varargin) togpu(colon(varargin{:})); % gpuArray.colon can't create singles
         else
             togpu = @double;
             fromgpu = @double;
             gpuzeros = @zeros;
+            gpurand = @rand;
+            gpucolon = @colon;
         end
     else
         togpu = @double;
         fromgpu = @double;
         gpuzeros = @zeros;
+        gpurand = @rand;
+        gpucolon = @colon;
     end
     
-    config = struct('fromgpu', fromgpu, 'togpu', togpu, 'gpuzeros', gpuzeros);
+    config = struct('fromgpu', fromgpu, 'togpu', togpu, 'gpuzeros', gpuzeros, ...
+        'gpurand', gpurand, 'gpucolon', gpucolon);
+    cpuconfig = struct('fromgpu', @double, 'togpu', @double, 'gpuzeros', @zeros, 'gpurand', @rand);
     
     momentum = params.momentum;
     alpha = params.initialrate;
@@ -64,9 +72,10 @@ function [best_weights, trainerr, valerr, best_valerr] = nnopt_net7(id, net, inp
             end
             thisperm = batchperm(j, batchperm(j,:) > 0);
             batchinput = create_batch_net7(input, thisperm);
-            W = weightstruct_net7(net, weights);
+            W = weightstruct_net7(net, gweights);
             [output,hidden] = fprop_net7(net, batchinput, W, false, config);
             G = bprop_net7(net, batchinput, hidden, output, W, config);
+            clear hidden
             grad = togpu(weightvector_net7(G));
             err = err - sum(sum(batchinput.targets .* log(max(tiny, output)))) / input.nitems;
             
@@ -84,7 +93,7 @@ function [best_weights, trainerr, valerr, best_valerr] = nnopt_net7(id, net, inp
             grad = grad ./ sqrt(rms + tiny);
             
             weight_change = momentum * weight_change - alpha * gain .* grad;
-            gweights = weights + weight_change;
+            gweights = gweights + weight_change;
             weights = fromgpu(gweights);
             
             %if isfield(net, 'weightconstraint')
@@ -101,7 +110,7 @@ function [best_weights, trainerr, valerr, best_valerr] = nnopt_net7(id, net, inp
             
             prev_grad = grad;
         end
-        trainerr(i) = err;
+        trainerr(i) = fromgpu(err);
         if params.adjust_rate && i > 6 && sum(diff(trainerr((i-6):(i-1))) > 0) > 2 && alphachange_steps > 5
             %alpha = alpha / 2;
             alpha = alpha * .8;
@@ -128,7 +137,7 @@ function [best_weights, trainerr, valerr, best_valerr] = nnopt_net7(id, net, inp
         alphachange_steps = alphachange_steps + 1;
         
         W = weightstruct_net7(net, weights);
-        valout = fprop_net7(net, input.val, W, true, config);
+        valout = fprop_net7(net, input.val, W, true, cpuconfig);
 
         valerr(i) = -sum(sum(input.val.targets .* log(max(tiny, valout)))) / input.val.nitems;
         if(valerr(i) < best_valerr)
