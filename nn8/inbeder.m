@@ -1,4 +1,4 @@
-function [der,psi,nappx] = inbeder(x,p,q)
+function [derout,psi,nappx] = inbeder(x,p,q)
 %
 %             x: Input argument -- vector of length k containing values to
 %                                  which beta function is integrated 
@@ -27,7 +27,7 @@ function [der,psi,nappx] = inbeder(x,p,q)
 err=1.e-12;
 minappx=3;
 maxappx=200;
-n= 0
+n= 0;
 %
 %          Initialize derivative vectors 
 %          and check for admissability of input arguments
@@ -51,24 +51,25 @@ if any((x <0)+(x > 1))
   error('Input argument x must be in [0,1] interval')
 end
 psi=zeros(k,7);
+derout=zeros(k,6);
 
 k1 = find(p<=0 | q<=0);
 if any(k1)
    tmp = NaN;
-   der(k1,:) = tmp(ones(length(k1),6)); 
+   derout(k1,:) = tmp(ones(length(k1),6)); 
 end
 %
 %     If x >= 1 the cdf of x is 1. 
 %
 k2 = find(x >= 1);
 if any(k2)
-   der(k2,1) = ones(length(k2),1);
+   derout(k2,1) = ones(length(k2),1);
    der(k2,2:6)=zeros(length(k2),5);
 end
 k3 = find(x <= 0);
 if any(k3)
-   der(k3,1) = zeros(length(k3),1);
-   der(k3,2:6)=zeros(length(k3),5);
+   derout(k3,1) = zeros(length(k3),1);
+   derout(k3,2:6)=zeros(length(k3),5);
 end
 kk = find(x > 0 & x < 1 & p > 0 & q > 0);
 if any(kk)
@@ -252,5 +253,6 @@ c0=der(ii2,3);
 der(ii2,3)=-der(ii2,5);
 der(ii2,5)=-c0;
 der(ii2,6)=-der(ii2,6);
+derout(kk,:)=der;
 end
 nappx=n;
