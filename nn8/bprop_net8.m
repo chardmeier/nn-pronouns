@@ -38,11 +38,14 @@ function G = bprop_net8(net, input, internal, output, W, config)
 
     Ahid2_inputgrads = net.transfer.Ahid2.df(internal.Ahid2) .* ...
         (internal.wLres' * wantfeatures_grads);
-    G.Ahid1Ahid2 = addbias(internal.Ahid1)' * Ahid2_inputgrads;
+    G.Ahid1Ahid2 = internal.Ahid1agg' * Ahid2_inputgrads;
+    Ahid1agg_grads = Ahid2_inputgrads * W.Ahid1Ahid2(2:end,:)';
     
-    Ahid1_inputgrads = net.transfer.Ahid1.df(internal.Ahid1) .* ...
-        (Ahid2_inputgrads * W.Ahid1Ahid2(2:end,:)');
-    G.antembed = addbias(input.ant)' * Ahid1_inputgrads;
+    nsensors = size(W.betasensors, 1);
+    G.betasensors = reshape(sum(bsxfun(@times, internal.betaderiv(:), Ahid1agg_grads), 2), 3, nsensors)';
+    
+    Ahid1_inputgrads = net.transfer.Ahid1.df(internal.Ahid1) .* (internal.betamap' * Ahid1agg_grads);
+    G.antembed = internal.antwvec' * Ahid1_inputgrads;
     
     % Ares logistic layer
 %     Ares_inputgrads = internal.Ares .* (1 - internal.Ares) .* ...

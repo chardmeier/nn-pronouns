@@ -8,7 +8,11 @@ function batch = create_batch_net8(input, batchperm)
     batch.nitems = length(batchperm);
     batch.src = input.src(batchperm,:);
     batch.srcprons = input.srcprons(batchperm,:);
-    batch.ant = input.ant(batchant,:);
+    
+    antwordmap = sparse(batchperm, 1, 1:length(batchperm), size(input.antmap, 1), 1);
+    batch.ant = input.ant(antwordmap(input.ant(:,1)) ~= 0,:);
+    batch.ant(:,1) = antwordmap(batch.ant(:,1));
+    
     batch.link = input.link(batchant,:);
     batch.targets = input.targets(batchperm,:);
     batch.nada = input.nada(batchperm,:);

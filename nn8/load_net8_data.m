@@ -37,12 +37,7 @@ function [input, vocab] = load_net8_data(dataprefix, trainidx, validx, testidx)
     vocab.srcprons = unique(rawsrc(:,4));
     [~,allsrcprons] = ismember(rawsrc(:,4), vocab.srcprons);
     
-    antdata = load(inpfile('ant'));
-    antwordmatrix = sparse(antdata(:,1), antdata(:,2), 1, max(antdata(:,1)), size(vocab.antwvecs, 1));
-    allant = sparse(1:size(antwordmatrix, 1), 1:size(antwordmatrix, 1), 1 ./ sum(antwordmatrix, 2)) * ...
-        antwordmatrix * vocab.antwvecs;
-        
-   
+    allant = load(inpfile('ant'));
     alltargets = load(inpfile('targets'));
     allantmap = load(inpfile('antmap'));
     
@@ -65,7 +60,7 @@ function [input, vocab] = load_net8_data(dataprefix, trainidx, validx, testidx)
     input.nitems = length(trainidx);
     input.src = allsrc(trainidx,:);
     input.srcprons = allsrcprons(trainidx,:);
-    input.ant = allant(trainant,:);
+    input.ant = allant(ismember(allant(:,1), trainant),:);
     input.link = alllink(trainant,vocab.activelinkfeat);
     input.nada = allnada(trainidx);
     input.targets = alltargets(trainidx,:);
@@ -76,7 +71,7 @@ function [input, vocab] = load_net8_data(dataprefix, trainidx, validx, testidx)
     input.val.nitems = length(validx);
     input.val.src = allsrc(validx,:);
     input.val.srcprons = allsrcprons(validx,:);
-    input.val.ant = allant(valant,:);
+    input.val.ant = allant(ismember(allant(:,1), valant),:);
     input.val.link = alllink(valant,vocab.activelinkfeat);
     input.val.targets = alltargets(validx,:);
     input.val.nada = allnada(validx);
@@ -87,7 +82,7 @@ function [input, vocab] = load_net8_data(dataprefix, trainidx, validx, testidx)
     input.test.nitems = length(testidx);
     input.test.src = allsrc(testidx,:);
     input.test.srcprons = allsrcprons(testidx,:);
-    input.test.ant = allant(testant,:);
+    input.test.ant = allant(ismember(allant(:,1), testant),:);
     input.test.link = alllink(testant,vocab.activelinkfeat);
     input.test.nada = allnada(testidx);
     input.test.targets = alltargets(testidx,:);

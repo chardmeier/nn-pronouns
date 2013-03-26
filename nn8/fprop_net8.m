@@ -44,8 +44,11 @@ function [output, internal] = fprop_net8(varargin)
     srcembcomplete = [srcprons, reshape(srcembed, input.nitems, net.srcngsize * net.srcembed)];
     srcjoin = net.transfer.srcjoin.f(addbias(srcembcomplete) * W.srcembjoin);
     
-    Ahid1 = net.transfer.Ahid1.f(addbias(input.ant) * W.antembed);
-    Ahid2 = net.transfer.Ahid2.f(addbias(Ahid1) * W.Ahid1Ahid2);
+    antwvec = net.antwvecs(input.ant(:,2),:);
+    Ahid1 = net.transfer.Ahid1.f(antwvec * W.antembed);
+    [betamap,betaderiv] = betasensor(W.betasensors, input.ant(:,1));
+    Ahid1agg = addbias(betamap * Ahid1);
+    Ahid2 = net.transfer.Ahid2.f(Ahid1agg * W.Ahid1Ahid2);
     if net.sample_antfeatures
         santfeatures = 0 + (gpurand(size(Ahid2)) < Ahid2);
     else
@@ -69,7 +72,7 @@ function [output, internal] = fprop_net8(varargin)
     output = softmax(addbias([nada, hidden]) * W.hidout, 'addcategory'); 
 
     internal = struct('Lhid', Lhid, 'Lres', Lres, 'wLres', wLres, 'srcembcomplete', srcembcomplete, ...
-        'wvec', {xwvec}, 'srcembed', srcembed, 'Ahid1', Ahid1, 'Ahid2', Ahid2, 'join', join, ...
-        'hidden', hidden, 'nada', nada);
+        'wvec', {xwvec}, 'srcembed', srcembed, 'antwvec', antwvec, 'Ahid1agg', Ahid1agg, 'betamap', betamap, ...
+        'betaderiv', betaderiv, 'Ahid2', Ahid2, 'join', join, 'hidden', hidden, 'nada', nada);
 end
 
