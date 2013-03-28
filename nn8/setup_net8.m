@@ -37,6 +37,7 @@ function net = setup_net8(srcembed, srcjoin, betasensors, Ahid1, Ahid2, Lhid, hi
     net.srcngsize = vocab.srcngsize;
     
     net.regulariser = 1e-3;
+    net.dropout_src = .5;
     
     net.nweights = net.srcwvec * net.srcembed + ...
         (net.srcprons + net.srcngsize * net.srcembed + 1) * net.srcjoin + ...
