@@ -41,6 +41,12 @@ function [input, vocab] = load_net8_data(dataprefix, trainidx, validx, testidx)
     alltargets = load(inpfile('targets'));
     allantmap = load(inpfile('antmap'));
     
+    % HACK HACK HACK!
+    noant = setdiff(1:length(allantmap), allant(:,1));
+    xant = [allant; [noant(:), repmat(length(vocab.tgtvoc), length(noant), 1)]];
+    [~,idx] = sort(xant(:,1));
+    allant = xant(idx,:);
+    
     alllink = spconvert(load(inpfile('linkfeat')));
     
     nexamples = size(allsrc, 1);
