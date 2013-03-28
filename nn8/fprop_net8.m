@@ -72,7 +72,7 @@ function [output, internal] = fprop_net8(varargin)
     output = softmax(addbias([nada, hidden]) * W.hidout, 'addcategory'); 
 
     internal = struct('Lhid', Lhid, 'Lres', Lres, 'wLres', wLres, 'srcembcomplete', srcembcomplete, ...
-        'wvec', {xwvec}, 'srcembed', srcembed, 'antwvec', antwvec, 'Ahid1agg', Ahid1agg, 'betamap', betamap, ...
-        'betaderiv', betaderiv, 'Ahid2', Ahid2, 'join', join, 'hidden', hidden, 'nada', nada);
+        'wvec', {xwvec}, 'srcembed', srcembed, 'antwvec', antwvec, 'Ahid1', Ahid1, 'Ahid1agg', Ahid1agg, ...
+        'betamap', betamap, 'betaderiv', betaderiv, 'Ahid2', Ahid2, 'join', join, 'hidden', hidden, 'nada', nada);
 end
 

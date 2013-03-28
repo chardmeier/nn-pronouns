@@ -27,15 +27,17 @@ function Success = check_gradients_net8(net, inp, W, order)
     grads = bprop_net8(net, inp, internal, baseout, W);
     %basescore = score(inp, baseout);
     
+    disp(grads.betasensors);
+    
     Success = true;
     
-    %fields = fieldnames(W);
-    fields = {'linkLhid'};
+    fields = fieldnames(W);
+    %fields = {'betasensors'};
     for fx = 1:length(fields)
         f = fields{fx};
         fprintf('Checking %s...\n', f);
         tocheck = randperm(numel(W.(f)), min(numel(W.(f)), nchecks));
-        %tocheck = 1:20;
+        %tocheck = 1:30;
         for i = 1:length(tocheck)
             idx = tocheck(i);
             fprintf('Element %d... ', idx);

@@ -1,9 +1,14 @@
-function G = bprop_net8(net, input, internal, output, W, config)
+function G = bprop_net8(net, input, internal, output, W, varargin)
 %UNTITLED4 Summary of this function goes here
 %   Detailed explanation goes here
 
-    togpu = config.togpu;
-    gpucolon = config.gpucolon;
+    if nargin > 5
+        togpu = varargin{1}.togpu;
+        gpucolon = varargin{1}.gpucolon;
+    else
+        togpu = @double;
+        gpucolon = @colon;
+    end
     
     G = struct();
 
@@ -41,9 +46,12 @@ function G = bprop_net8(net, input, internal, output, W, config)
     G.Ahid1Ahid2 = internal.Ahid1agg' * Ahid2_inputgrads;
     Ahid1agg_grads = Ahid2_inputgrads * W.Ahid1Ahid2(2:end,:)';
     
-    nsensors = size(W.betasensors, 1);
-    G.betasensors = reshape(sum(bsxfun(@times, internal.betaderiv(:), Ahid1agg_grads), 2), 3, nsensors)';
-    
+    Ahid1xgrads = sum(internal.Ahid1 .* Ahid1agg_grads(input.ant(:,1),:), 2);
+    G.betasensors = zeros(size(W.betasensors));
+    G.betasensors(:,1) = sum(bsxfun(@times, internal.betaderiv.pvals, Ahid1xgrads))';
+    G.betasensors(:,2) = sum(bsxfun(@times, internal.betaderiv.wdavals, Ahid1xgrads))';
+    G.betasensors(:,3) = sum(bsxfun(@times, internal.betaderiv.wdbvals, Ahid1xgrads))';
+
     Ahid1_inputgrads = net.transfer.Ahid1.df(internal.Ahid1) .* (internal.betamap' * Ahid1agg_grads);
     G.antembed = internal.antwvec' * Ahid1_inputgrads;
     

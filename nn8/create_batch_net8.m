@@ -9,7 +9,7 @@ function batch = create_batch_net8(input, batchperm)
     batch.src = input.src(batchperm,:);
     batch.srcprons = input.srcprons(batchperm,:);
     
-    antwordmap = sparse(batchperm, 1, 1:length(batchperm), size(input.antmap, 1), 1);
+    antwordmap = sparse(batchant, 1, 1:length(batchant), size(input.antmap, 1), 1);
     batch.ant = input.ant(antwordmap(input.ant(:,1)) ~= 0,:);
     batch.ant(:,1) = antwordmap(batch.ant(:,1));
     
@@ -18,4 +18,3 @@ function batch = create_batch_net8(input, batchperm)
     batch.nada = input.nada(batchperm,:);
     [batch.antmap,batch.antidx] = idxcell2map(input.antidx(batchperm));
 end
-
