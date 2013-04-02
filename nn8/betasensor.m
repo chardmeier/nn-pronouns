@@ -27,11 +27,16 @@ function [out,deriv] = betasensor(params, mapvec)
     indices = sub2ind(size(ftable), blocks(mapvec), counters);
     factors = ftable(indices);
     
-    mapmat = bsxfun(@eq, 1:nout, mapvec);
-    
-    tout = zeros(size(mapmat));
-    tout(mapmat) = factors;
-    out = tout';
+    if isa(mapvec, 'gpuArray')
+        out = gpuArray.zeros(nout, nin);
+        out(sub2ind(size(out), mapvec, 1:nin)) = factors;
+        %mapmat = bsxfun(@eq, 1:nout, mapvec);
+        %tout = mapmat;
+        %tout(mapmat) = factors;
+        %out = tout';
+    else
+        out = sparse(mapvec, 1:nin, factors, nout, nin);
+    end
     
     if nargout > 1
         deriv = struct();
