@@ -66,6 +66,8 @@ function [best_fweights, trainerr, valerr, best_bweights] = train_dae(id, input,
     bprev_grad = togpu(zeros(nhidden + 1, nvis));
     brms = togpu(ones(nhidden + 1, nvis));
     
+    dotsteps = floor(nbatch / 80);
+    
     best_valerr = inf;
     alphachange_steps = 0;
     tiny = 1e-30;
@@ -75,7 +77,7 @@ function [best_fweights, trainerr, valerr, best_bweights] = train_dae(id, input,
         
         err = 0;
         for j = 1:nbatch
-            if mod(j,100) == 0
+            if mod(j,dotsteps) == 0
                 fprintf('.');
             end
             thisperm = batchperm(j, batchperm(j,:) > 0);
