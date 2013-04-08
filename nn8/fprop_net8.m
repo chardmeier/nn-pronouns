@@ -31,7 +31,7 @@ function [output, internal] = fprop_net8(varargin)
     end
     
     srcembed = gpuzeros(input.nitems, net.srcembed, net.srcngsize);
-    xwvec = cell(net.srcngsize);
+    xwvec = cell(net.srcngsize, 1);
     for i = 1:net.srcngsize
         xwvec{i} = togpu(net.srcwvecs(input.src(:,i),:));
         xwvec{i}(drop,:) = 0;
@@ -47,7 +47,7 @@ function [output, internal] = fprop_net8(varargin)
     antwvec = net.antwvecs(input.ant(:,2),:);
     Ahid1 = net.transfer.Ahid1.f(antwvec * W.antembed);
     [betamap,betaderiv] = betasensor(W.betasensors, input.ant(:,1));
-    Ahid1agg = addbias(betamap * Ahid1);
+    Ahid1agg = addbias(reshape((betamap * Ahid1)', net.betasensors * net.Ahid1, [])');
     Ahid2 = net.transfer.Ahid2.f(Ahid1agg * W.Ahid1Ahid2);
     if net.sample_antfeatures
         santfeatures = 0 + (gpurand(size(Ahid2)) < Ahid2);
@@ -62,7 +62,7 @@ function [output, internal] = fprop_net8(varargin)
     %Lres = vertcat(Lresc{:});
     %Lres = sigmoid(addbias(Lhid) * W.LhidLres);
     
-    wLres = togpu(full(sparse(input.antmap, 1:length(input.antmap), fromgpu(Lres))));
+    wLres = togpu(sparse(input.antmap, 1:length(input.antmap), fromgpu(Lres)));
     wantfeatures = wLres * santfeatures;
     
     nada = togpu(full(input.nada));

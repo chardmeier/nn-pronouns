@@ -46,13 +46,16 @@ function G = bprop_net8(net, input, internal, output, W, varargin)
     G.Ahid1Ahid2 = internal.Ahid1agg' * Ahid2_inputgrads;
     Ahid1agg_grads = Ahid2_inputgrads * W.Ahid1Ahid2(2:end,:)';
     
-    Ahid1xgrads = sum(internal.Ahid1 .* Ahid1agg_grads(input.ant(:,1),:), 2);
     G.betasensors = zeros(size(W.betasensors));
-    G.betasensors(:,1) = sum(bsxfun(@times, internal.betaderiv.pvals, Ahid1xgrads))';
-    G.betasensors(:,2) = sum(bsxfun(@times, internal.betaderiv.wdavals, Ahid1xgrads))';
-    G.betasensors(:,3) = sum(bsxfun(@times, internal.betaderiv.wdbvals, Ahid1xgrads))';
-
-    Ahid1_inputgrads = net.transfer.Ahid1.df(internal.Ahid1) .* (internal.betamap' * Ahid1agg_grads);
+    for i = 1:net.betasensors
+        sr = (i-1) * net.Ahid1 + (1:net.Ahid1);
+        Ahid1xgrads = sum(internal.Ahid1 .* Ahid1agg_grads(input.ant(:,1),sr), 2);
+        G.betasensors(i,1) = internal.betaderiv.wdavals(:,i)' * Ahid1xgrads;
+        G.betasensors(i,2) = internal.betaderiv.wdbvals(:,i)' * Ahid1xgrads;
+    end
+    
+    Ahid1_inputgrads = net.transfer.Ahid1.df(internal.Ahid1) .* ...
+        (internal.betamap' * reshape(Ahid1agg_grads', net.Ahid1, [])');
     G.antembed = internal.antwvec' * Ahid1_inputgrads;
     
     % Ares logistic layer

@@ -13,9 +13,9 @@ function W = weightstruct_net8(net, weights)
     W.srcembjoin = extract(net.srcprons + net.srcngsize * net.srcembed + 1, net.srcjoin);
     W.linkLhid = extract(net.link + 1, net.Lhid);
     W.LhidLres = extract(net.Lhid + 1, 1);
-    W.betasensors = extract(net.betasensors, 3);
+    W.betasensors = extract(net.betasensors, 2);
     W.antembed = extract(net.antwvec, net.Ahid1);
-    W.Ahid1Ahid2 = extract(net.Ahid1 + 1, net.Ahid2);
+    W.Ahid1Ahid2 = extract(net.betasensors * net.Ahid1 + 1, net.Ahid2);
     W.joinhid = extract(net.srcjoin + net.Ahid2 + 2, net.hidden);
     W.hidout = extract(net.hidden + 2, net.output - 1);
     
