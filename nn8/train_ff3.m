@@ -21,6 +21,14 @@ function [best_fweights, trainerr, valerr, best_bweights] = train_ff3(id, input,
     nvis = size(input, 2);
     ntgt = size(targets, 2);
     
+    if strcmp(F2, 'softmax')
+        ntgt = ntgt - 1;
+        clipsoftmax = @(x) x(:,1:(end-1));
+        F2 = @(x) clipsoftmax(softmax(x, 'addcategory'));
+        targets = clipsoftmax(targets);
+        valtgt = clipsoftmax(valtgt);
+    end
+    
     if params.use_gpu && exist('gpuDeviceCount', 'file') && gpuDeviceCount >= 1
         gpu = gpuDevice;
         if gpu.DeviceSupported
