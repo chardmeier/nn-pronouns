@@ -24,6 +24,28 @@ function [output, internal] = fprop_net8(varargin)
     gpuzeros = config.gpuzeros;
     gpurand = config.gpurand;
     
+    dropout = 0;
+    if isfield(net, 'dropout')
+        if prediction_mode
+            W.srcembjoin = (1 - net.dropout) * W.srcembjoin;
+            W.linkLhid = (1 - net.dropout) * W.linkLhid;
+            W.LhidLres = (1 - net.dropout) * W.LhidLres;
+            W.Ahid1Ahid2 = (1 - net.dropout) * W.Ahid1Ahid2;
+            W.joinhid = (1 - net.dropout) * W.joinhid;
+            W.hidout = (1 - net.dropout) * W.hidout;
+            dropout = 0;
+        else
+            dropout = net.dropout;
+        end
+    end
+    function y = do_dropout(x)
+        if dropout > 0
+            y = (rand(size(x)) < dropout) .* x;
+        else
+            y = x;
+        end
+    end
+    
     if ~prediction_mode && isfield(net, 'dropout_src')
         drop = randperm(input.nitems, round(net.dropout_src * input.nitems));
     else
@@ -41,13 +63,13 @@ function [output, internal] = fprop_net8(varargin)
 
     srcprons = bsxfun(@eq, input.srcprons, 1:net.srcprons);
     srcprons(drop,:) = 0;
-    srcembcomplete = [srcprons, reshape(srcembed, input.nitems, net.srcngsize * net.srcembed)];
+    srcembcomplete = [srcprons, do_dropout(reshape(srcembed, input.nitems, net.srcngsize * net.srcembed))];
     srcjoin = net.transfer.srcjoin.f(addbias(srcembcomplete) * W.srcembjoin);
     
     antwvec = net.antwvecs(input.ant(:,2),:);
     Ahid1 = net.transfer.Ahid1.f(antwvec * W.antembed);
     [betamap,betaderiv] = betasensor(W.betasensors, input.ant(:,1));
-    Ahid1agg = addbias(reshape((betamap * Ahid1)', net.betasensors * net.Ahid1, [])');
+    Ahid1agg = addbias(do_dropout(reshape((betamap * Ahid1)', net.betasensors * net.Ahid1, [])'));
     Ahid2 = net.transfer.Ahid2.f(Ahid1agg * W.Ahid1Ahid2);
     if net.sample_antfeatures
         santfeatures = 0 + (gpurand(size(Ahid2)) < Ahid2);
@@ -55,8 +77,8 @@ function [output, internal] = fprop_net8(varargin)
         santfeatures = Ahid2;
     end
     
-    Lhid = net.transfer.Lhid.f(addbias(togpu(full(input.link))) * W.linkLhid);
-    Lresin = addbias(Lhid) * W.LhidLres;
+    Lhid = net.transfer.Lhid.f(addbias(do_dropout(togpu(input.link))) * W.linkLhid);
+    Lresin = addbias(do_dropout(Lhid)) * W.LhidLres;
     Lres = groupwise_softmax(Lresin, input.antmap);
     %Lresc = cellfun(@(x) softmax(Lresin(x,:)')', input.antidx, 'UniformOutput', false);
     %Lres = vertcat(Lresc{:});
@@ -66,9 +88,9 @@ function [output, internal] = fprop_net8(varargin)
     wantfeatures = wLres * santfeatures;
     
     nada = togpu(full(input.nada));
-    join = [srcjoin, wantfeatures];
+    join = do_dropout([srcjoin, wantfeatures]);
     
-    hidden = net.transfer.hidden.f(addbias([nada, join]) * W.joinhid);
+    hidden = do_dropout(net.transfer.hidden.f(addbias([nada, join]) * W.joinhid));
     output = softmax(addbias([nada, hidden]) * W.hidout, 'addcategory'); 
 
     internal = struct('Lhid', Lhid, 'Lres', Lres, 'wLres', wLres, 'srcembcomplete', srcembcomplete, ...
