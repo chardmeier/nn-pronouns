@@ -34,6 +34,7 @@ function W = pretrain_net8(id, net, inp, params)
         antval = net.antwvecs(inp.val.ant(:,2),2:end);
         params.nsteps = nsteps(1);
         W.antembed = train_dae([id '-antembed'], ant, antval, net.Ahid1, params);
+        clear ant antval h
         done = done + 1;
         save(sprintf('pretrain-%s.mat', id), 'W', 'net', 'params', '-v7.3');
     end
@@ -44,7 +45,7 @@ function W = pretrain_net8(id, net, inp, params)
         ante = h.Ahid1agg(:,2:end);
         [~,h] = fprop_net8(net, inp.val, W, true);
         anteval = h.Ahid1agg(:,2:end);
-        clear ant antval h
+        clear h
         params.nsteps = nsteps(2);
         W.Ahid1Ahid2 = train_dae([id '-Ahid1Ahid2'], ante, anteval, net.Ahid2, params);
         done = done + 1;
@@ -57,6 +58,7 @@ function W = pretrain_net8(id, net, inp, params)
         ctxval = net.srcwvecs(inp.val.src(:),2:end);
         params.nsteps = nsteps(3);
         W.srcembed = train_dae([id '-srcembed'], ctx, ctxval, net.srcembed, params);
+        clear ctx ctxval
         done = done + 1;
         save(sprintf('pretrain-%s.mat', id), 'W', 'net', 'params', '-v7.3');
     end
@@ -67,9 +69,10 @@ function W = pretrain_net8(id, net, inp, params)
         emb = h.srcembcomplete;
         [~,h] = fprop_net8(net, inp.val, W, true);
         embval = h.srcembcomplete;
-        clear ctx ctxval h
+        clear h
         params.nsteps = nsteps(4);
         W.srcembjoin = train_dae([id '-srcjoin'], emb, embval, net.srcjoin, params);
+        clear emb embval
         done = done + 1;
         save(sprintf('pretrain-%s.mat', id), 'W', 'net', 'params', '-v7.3');
     end
@@ -80,7 +83,7 @@ function W = pretrain_net8(id, net, inp, params)
         join = [inp.nada(inp.antmap,:), h.join(inp.antmap,1:net.srcjoin), h.Ahid2];
         [~,h] = fprop_net8(net, inp.val, W, true);
         joinval = [inp.val.nada(inp.val.antmap,:), h.join(inp.val.antmap,1:net.srcjoin), h.Ahid2];
-        clear emb embval h
+        clear h
 
         params.nsteps = nsteps(5);
         params.F2 = 'softmax';
