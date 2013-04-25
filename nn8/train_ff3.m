@@ -1,4 +1,4 @@
-function [best_fweights, trainerr, valerr, best_bweights] = train_dae(id, input, val, nhidden, params)
+function [best_fweights, trainerr, valerr, best_bweights] = train_ff3(id, input, targets, val, valtgt, nhidden, params)
 %UNTITLED7 Summary of this function goes here
 %   Detailed explanation goes here
 
@@ -19,6 +19,15 @@ function [best_fweights, trainerr, valerr, best_bweights] = train_dae(id, input,
 
     nitems = size(input, 1);
     nvis = size(input, 2);
+    ntgt = size(targets, 2);
+    
+    if strcmp(F2, 'softmax')
+        ntgt = ntgt - 1;
+        clipsoftmax = @(x) x(:,1:(end-1));
+        F2 = @(x) clipsoftmax(softmax(x, 'addcategory'));
+        targets = clipsoftmax(targets);
+        valtgt = clipsoftmax(valtgt);
+    end
     
     if params.use_gpu && exist('gpuDeviceCount', 'file') && gpuDeviceCount >= 1
         gpu = gpuDevice;
@@ -52,7 +61,7 @@ function [best_fweights, trainerr, valerr, best_bweights] = train_dae(id, input,
     valerr = zeros(1, nsteps);
     
     fweights = togpu(stddev * randn(nvis + 1, nhidden));
-    bweights = togpu(stddev * randn(nhidden + 1, nvis));
+    bweights = togpu(stddev * randn(nhidden + 1, ntgt));
     fweights(1,:) = 0;
     bweights(1,:) = 0;
     
@@ -61,10 +70,10 @@ function [best_fweights, trainerr, valerr, best_bweights] = train_dae(id, input,
     fprev_grad = togpu(zeros(nvis + 1, nhidden));
     frms = togpu(ones(nvis + 1, nhidden));
     
-    bgain = togpu(ones(nhidden + 1, nvis));
-    bweight_change = togpu(zeros(nhidden + 1, nvis));
-    bprev_grad = togpu(zeros(nhidden + 1, nvis));
-    brms = togpu(ones(nhidden + 1, nvis));
+    bgain = togpu(ones(nhidden + 1, ntgt));
+    bweight_change = togpu(zeros(nhidden + 1, ntgt));
+    bprev_grad = togpu(zeros(nhidden + 1, ntgt));
+    brms = togpu(ones(nhidden + 1, ntgt));
     
     dotsteps = floor(nbatch / 80);
     
@@ -83,6 +92,7 @@ function [best_fweights, trainerr, valerr, best_bweights] = train_dae(id, input,
             thisperm = batchperm(j, batchperm(j,:) > 0);
             currentsize = length(thisperm);
             batchinput = togpu(input(thisperm,:));
+            batchtargets = togpu(targets(thisperm,:));
             
             noisyinput = gpuones(currentsize, nvis + 1);
             noisyinput(:,2:end) = (gpurand(size(batchinput)) < noise_threshold) .* batchinput;
@@ -93,7 +103,7 @@ function [best_fweights, trainerr, valerr, best_bweights] = train_dae(id, input,
             output = F2(hidden * bweights);
             
             % Backpropagation
-            error = output - batchinput;
+            error = output - batchtargets;
             bgrads = hidden' * error;
             fgrads = noisyinput' * (DF1(hidden(:,2:end)) .* (error * bweights(2:end,:)'));
 
@@ -156,7 +166,7 @@ function [best_fweights, trainerr, valerr, best_bweights] = train_dae(id, input,
         valout = F2(addbias(valhidden) * cbweights);
 
         %valerr(i) = fromgpu(-sum(sum(val .* log(max(tiny, valout)))) / size(val, 1));
-        valerr(i) = sum(sum((valout - val) .^ 2)) / size(val, 1);
+        valerr(i) = sum(sum((valout - valtgt) .^ 2)) / size(val, 1);
         if(valerr(i) < best_valerr)
             best_valerr = valerr(i);
             best_fweights = cfweights;
@@ -169,7 +179,7 @@ function [best_fweights, trainerr, valerr, best_bweights] = train_dae(id, input,
         end
         
         if mod(i, 10) == 0
-            save(sprintf('dae-%s.%d.mat', id, i), '-v7.3', 'best_fweights', 'best_bweights');
+            save(sprintf('ff3-%s.%d.mat', id, i), '-v7.3', 'best_fweights', 'best_bweights');
         end
     end
     

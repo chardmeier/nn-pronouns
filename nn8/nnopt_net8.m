@@ -5,7 +5,7 @@ function [best_weights, trainerr, valerr, best_valerr] = nnopt_net8(id, net, inp
     if params.use_gpu && exist('gpuDeviceCount', 'file') && gpuDeviceCount >= 1
         gpu = gpuDevice;
         if gpu.DeviceSupported
-            togpu = @(x) gpuArray(single(x));
+            togpu = @(x) gpuArray(full(single(x)));
             fromgpu = @(x) double(gather(x));
             gpuzeros = @(varargin) gpuArray.zeros(varargin{:}, 'single');
             gpurand = @(varargin) gpuArray.rand(varargin{:}, 'single');
@@ -48,8 +48,26 @@ function [best_weights, trainerr, valerr, best_valerr] = nnopt_net8(id, net, inp
         weights = net.initweights;
     else
         weights = params.stddev * randn(net.nweights, 1);
+        W = weightstruct_net8(net, weights);
+        bmeans = ((1:net.betasensors)' - 0.5) / net.betasensors;
+        bvar = 1 / net.betasensors .^ 2;
+        bfactor = (bmeans .* (1 - bmeans) / bvar - 1);
+        W.betasensors(:,1) = log(bmeans .* bfactor);
+        W.betasensors(:,2) = log((1 - bmeans) .* bfactor);
+        weights = weightvector_net8(W);
     end
     gweights = togpu(weights);
+    
+    if isfield(net, 'regulariser')
+        regulariser = togpu(net.regulariser);
+    else
+        regulariser = 0;
+    end
+    if isfield(net, 'l1regulariser')
+        l1regulariser = togpu(net.l1regulariser);
+    else
+        l1regulariser = 0;
+    end
     
     gain = togpu(ones(net.nweights, 1));
     %weight_change = sparse(net.nweights, 1);
@@ -84,11 +102,11 @@ function [best_weights, trainerr, valerr, best_valerr] = nnopt_net8(id, net, inp
             err = err - sum(sum(batchinput.targets .* log(max(tiny, output)))) / input.nitems;
             
             %grad = (grad > 1e-5) .* grad; % conserve sparsity
-            if isfield(net, 'regulariser') && net.regulariser > 0
-                grad = grad + net.regulariser * gweights;
+            if any(regulariser ~= 0)
+                grad = grad + regulariser .* gweights;
             end
-            if isfield(net, 'l1regulariser') && net.l1regulariser > 0
-                grad = grad + net.l1regulariser * sign(gweights);
+            if any(l1regulariser ~= 0)
+                grad = grad + l1regulariser .* sign(gweights);
             end
             
             rms = 0.9 * rms + 0.1 * grad .^ 2;

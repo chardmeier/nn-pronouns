@@ -14,24 +14,28 @@ function [out,deriv] = betasensor(params, mapvec)
     points = bsxfun(@times, 1:maxantwords, 1 ./ (1:maxantwords)');
     pointvec = repmat(points(tril(true(size(points)), -1)), 1, nsensors);
     
-    alpha = repmat(exp(params(:,2))', length(pointvec), 1);
-    beta = repmat(exp(params(:,3))', length(pointvec), 1);
+    alpha = repmat(exp(params(:,1))', length(pointvec), 1);
+    beta = repmat(exp(params(:,2))', length(pointvec), 1);
     
     ibd = inbeder(pointvec(:), alpha(:), beta(:));
     
     cumtable = ones(maxantwords, maxantwords, nsensors);
     cumtable(repmat(tril(true(maxantwords), -1), [1 1 nsensors])) = ibd(:,1);
     ptable = diff([zeros(maxantwords, 1, nsensors), cumtable], 1, 2);
-    ftable = squeeze(sum(bsxfun(@times, permute(params(:,1), [3 2 1]), ptable), 3));
     
-    indices = sub2ind(size(ftable), blocks(mapvec), counters);
-    factors = ftable(indices);
+    if isa(mapvec, 'gpuArray')
+        celltype = @gpuArray;
+        bdcall = @blkdiag;
+    else
+        celltype = @sparse;
+        bdcall = @blkdiagmex;
+    end
     
-    mapmat = bsxfun(@eq, 1:nout, mapvec);
-    
-    tout = zeros(size(mapmat));
-    tout(mapmat) = factors;
-    out = tout';
+    pcell = cell(maxantwords, 1);
+    for i = 1:maxantwords
+        pcell{i} = celltype(reshape(ptable(i,1:i,:), i, nsensors)');
+    end
+    out = bdcall(pcell{blocks});
     
     if nargout > 1
         deriv = struct();
@@ -44,13 +48,13 @@ function [out,deriv] = betasensor(params, mapvec)
         dacumtable(repmat(tril(true(maxantwords), -1), [1 1 nsensors])) = ibd(:,2);
         datable = diff([zeros(maxantwords, 1, nsensors), dacumtable], 1, 2);
         davals = reshape(datable(sub2ind(size(datable), idx1, idx2, idx3(:))), nin, nsensors);
-        deriv.wdavals = bsxfun(@times, (params(:,1) .* exp(params(:,2)))', davals);
+        deriv.wdavals = bsxfun(@times, exp(params(:,1))', davals);
         
         dbcumtable = zeros(maxantwords, maxantwords, nsensors);
         dbcumtable(repmat(tril(true(maxantwords), -1), [1 1 nsensors])) = ibd(:,4);
         dbtable = diff([zeros(maxantwords, 1, nsensors), dbcumtable], 1, 2);
         dbvals = reshape(dbtable(sub2ind(size(dbtable), idx1, idx2, idx3(:))), nin, nsensors);
-        deriv.wdbvals = bsxfun(@times, (params(:,1) .* exp(params(:,3)))', dbvals);
+        deriv.wdbvals = bsxfun(@times, exp(params(:,2))', dbvals);
     end
 end
 
