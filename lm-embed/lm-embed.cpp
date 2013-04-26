@@ -13,8 +13,8 @@
 
 typedef float Float;
 typedef Eigen::MatrixXf Matrix;
-typedef Eigen::VectorXf Vector;
-typedef Eigen::ArrayXf Array;
+typedef Eigen::RowVectorXf Vector;
+typedef Eigen::ArrayXXf Array;
 typedef Eigen::SparseMatrix<Float> SparseMatrix;
 
 typedef unsigned int uint;
@@ -184,7 +184,7 @@ Batch TrigramSampler::operator()(uint size, std::vector<uint> *sample) const {
 	batch.nitems = size;
 	batch.targets.resize(size, 2 * (PREDICTION_VOCSIZE + 1));
 
-	std::uniform_int_distribution<uint> dist(0, counts_.back());
+	std::uniform_int_distribution<uint> dist(0, counts_.back() - 1);
 	for(uint i = 0; i < size; i++) {
 		uint s = dist(generator_);
 		if(sample)
@@ -240,7 +240,7 @@ struct SigmoidActivation {
 template<class Configuration>
 class LMEmbedCoefficients {
 private:
-	Array W_;
+	Eigen::ArrayXf W_;
 
 	Configuration conf_;
 
@@ -261,10 +261,10 @@ public:
 	static LMEmbedCoefficients ones(const Configuration &conf);
 	static LMEmbedCoefficients init_weights(const Configuration &conf);
 
-	Array &array() {
+	Eigen::ArrayXf &array() {
 		return W_;
 	}
-	const Array &array() const {
+	const Eigen::ArrayXf &array() const {
 		return W_;
 	}
 
@@ -381,9 +381,13 @@ public:
 
 template<class Configuration>
 const Matrix &LMEmbed<Configuration>::fprop(const Matrix &input, const Coeff &W) {
-	hidin_.noalias() = input_ * W.inphid() + W.hidbias();
+	input_ = input;
+
+	hidin_.noalias() = input_ * W.inphid();
+	hidin_.rowwise() += W.hidbias();
 	hidden_.noalias() = conf_.activation.f(hidin_);
-	output_.noalias() = hidden_ * W.hidout() + W.outbias();
+	output_.noalias() = hidden_ * W.hidout();
+	output_.rowwise() += W.outbias();
 	softmax(output_.leftCols(conf_.redvocsize));
 	softmax(output_.rightCols(conf_.redvocsize));
 
@@ -395,11 +399,11 @@ const typename Configuration::Coeff
 		LMEmbed<Configuration>::bprop(const Matrix &targets, const Coeff &W) {
 	Coeff grads = Coeff::zeros(conf_);
 
-	Matrix error = output_ - input_;
+	Matrix error = output_ - targets;
 	grads.hidout().noalias() = hidden_.adjoint() * error;
 	grads.outbias().noalias() = error.colwise().sum();
 
-	Matrix hiderr = conf_.activation.df(hidin_, hidden_).cwiseProduct(error * W.hidout());
+	Matrix hiderr = conf_.activation.df(hidin_, hidden_).cwiseProduct(error * W.hidout().adjoint());
 	grads.inphid().noalias() = input_.adjoint() * hiderr;
 	grads.hidbias().noalias() = hiderr.colwise().sum();
 
