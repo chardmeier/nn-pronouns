@@ -40,6 +40,8 @@ function [best_weights, trainerr, valerr, best_valerr] = nnopt_net6(id, net, inp
     best_valerr = inf;
     alphachange_steps = 0;
     tiny = 1e-30;
+    mverr = zeros(1, nsteps * nbatch);
+    mv_t = 1;
     indices = [1:input.nitems, zeros(1, npad)];
     for i = 1:nsteps
         batchperm = reshape(indices(randperm(numel(indices))), nbatch, batchsize);
@@ -51,6 +53,8 @@ function [best_weights, trainerr, valerr, best_valerr] = nnopt_net6(id, net, inp
             [output,hidden] = fprop_net6(net, batchinput, W, false);
             grad = bprop_net6(net, batchinput, hidden, output, W);
             err = err - sum(sum(batchinput.targets .* log(max(tiny, output)))) / input.nitems;
+            mv_t = mv_t + 1;
+            mverr(mv_t) = mverr(mv_t-1) - (2/((i-1)*nbatch+j)) * (mverr(mv_t-1) - err);
             
             rms = transform_weights(@(r,g) 0.9 * r + 0.1 * g .^ 2, rms, grad);
             grad = transform_weights(@(r,g) g ./ (sqrt(r + tiny)), rms, grad);
@@ -68,6 +72,8 @@ function [best_weights, trainerr, valerr, best_valerr] = nnopt_net6(id, net, inp
             
             prev_grad = grad;
         end
+        plot(1:length(mverr), mverr, 'erasemode', 'background');
+        drawnow;
         trainerr(i) = err;
         if adjust_rate && i > 6 && sum(diff(trainerr((i-6):(i-1))) > 0) > 2 && alphachange_steps > 5
             %alpha = alpha / 2;
