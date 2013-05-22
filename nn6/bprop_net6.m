@@ -82,13 +82,5 @@ function G = bprop_net6(net, input, internal, output, W)
     %Ares_inputgrads = internal.Ares .* (1 - internal.Ares) .* Ares_outputgrads;
     %Ahid_inputgrads = internal.Ahid .* (1 - internal.Ahid) .* (Ares_inputgrads * W.AhidAres(2:end,:)');
     %G.linkAhid = addbias(input.link)' * Ahid_inputgrads;
-    
-    if isfield(net, 'regulariser') && net.regulariser > 0
-        G = transform_weights(@(x,y) x + net.regulariser * y, G, W);
-    end
-
-    if isfield(net, 'l1regulariser') && net.l1regulariser > 0
-        G = transform_weights(@(x,y) x + net.l1regulariser * sign(y), G, W);
-    end
 end
 

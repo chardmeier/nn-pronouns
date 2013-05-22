@@ -50,8 +50,20 @@ function [best_weights, trainerr, valerr, best_valerr] = nnopt_net6(id, net, inp
         for j = 1:nbatch
             thisperm = batchperm(j, batchperm(j,:) > 0);
             batchinput = create_batch_net6(input, thisperm);
-            [output,hidden] = fprop_net6(net, batchinput, W, false);
-            grad = bprop_net6(net, batchinput, hidden, output, W);
+            Wstruct = weightstruct_net6(net, W);
+            [output,hidden] = fprop_net6(net, batchinput, Wstruct, false);
+            gradstruct = bprop_net6(net, batchinput, hidden, output, Wstruct);
+            grad = weightvector_net6(gradstruct);
+            W = weightvector_net6(Wstruct);
+
+            if isfield(net, 'regulariser') && net.regulariser > 0
+                grad = transform_weights(@(x,y) x + net.regulariser * y, grad, W);
+            end
+
+            if isfield(net, 'l1regulariser') && net.l1regulariser > 0
+                grad = transform_weights(@(x,y) x + net.l1regulariser * sign(y), grad, W);
+            end
+    
             err = err - sum(sum(batchinput.targets .* log(max(tiny, output)))) / input.nitems;
             mv_t = mv_t + 1;
             mverr(mv_t) = mverr(mv_t-1) - (2/((i-1)*nbatch+j)) * (mverr(mv_t-1) - err);
@@ -100,7 +112,8 @@ function [best_weights, trainerr, valerr, best_valerr] = nnopt_net6(id, net, inp
         
         alphachange_steps = alphachange_steps + 1;
         
-        valout = fprop_net6(net, input.val, W, true);
+        Wstruct = weightstruct_net6(net, W);
+        valout = fprop_net6(net, input.val, Wstruct, true);
 
         valerr(i) = -sum(sum(input.val.targets .* log(max(tiny, valout)))) / input.val.nitems;
         if(valerr(i) < best_valerr)
