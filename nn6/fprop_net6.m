@@ -4,6 +4,16 @@ function [output, internal] = fprop_net6(net, input, W, prediction_mode)
     
     srcembed_bias = isfield(net, 'srcembed_bias') && net.srcembed_bias;
     
+    if isfield(net, 'dropout')
+        if ~prediction_mode
+            dropout = @(x) x .* (rand(size(x)) > net.dropout);
+        else
+            dropout = @(x) (1 - net.dropout) * x;
+        end
+    else
+        dropout = @(x) x;
+    end
+    
     srcvocsize = length(net.srcvoc);
     srcembed = zeros(input.nitems, net.srcembed, net.srcngsize);
     for i = 1:net.srcngsize
@@ -30,7 +40,7 @@ function [output, internal] = fprop_net6(net, input, W, prediction_mode)
         santfeatures = antfeatures;
     end
     
-    Ahid = sigmoid(addbias(input.link) * W.linkAhid);
+    Ahid = dropout(sigmoid(addbias(input.link) * W.linkAhid));
 
     Aresin = addbias(Ahid) * W.AhidAres;
     Aresc = cellfun(@(x) softmax(Aresin(x,:)')', input.antidx, 'UniformOutput', false);
@@ -40,15 +50,15 @@ function [output, internal] = fprop_net6(net, input, W, prediction_mode)
     wAres = sparse(input.antmap, 1:length(input.antmap), Ares);
     wantfeatures = wAres * santfeatures;
 
-    embed = [reshape(srcembed, input.nitems, net.srcngsize * net.srcembed), ...
-             wantfeatures];
+    embed = dropout([reshape(srcembed, input.nitems, net.srcngsize * net.srcembed), ...
+             wantfeatures]);
     if isfield(net, 'sample_embed') && net.sample_embed
         sembed = 0 + (rand(size(embed)) < embed);
     else
         sembed = embed;
     end
     
-    hidden = sigmoid(addbias([input.nada, sembed]) * W.embhid);
+    hidden = dropout(sigmoid(addbias([input.nada, sembed]) * W.embhid));
     output = softmax(addbias([input.nada, hidden]) * W.hidout, 'addcategory'); 
 
     internal = struct('Ahid', Ahid, 'Ares', Ares, 'wAres', wAres, 'antfeatures', antfeatures, ...
