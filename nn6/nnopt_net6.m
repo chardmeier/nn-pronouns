@@ -84,8 +84,8 @@ function [best_weights, trainerr, valerr, best_valerr] = nnopt_net6(id, net, inp
             
             prev_grad = grad;
         end
-        plot(1:length(mverr), mverr, 'erasemode', 'background');
-        drawnow;
+        %plot(1:length(mverr), mverr, 'erasemode', 'background');
+        %drawnow;
         trainerr(i) = err;
         if adjust_rate && i > 6 && sum(diff(trainerr((i-6):(i-1))) > 0) > 2 && alphachange_steps > 5
             %alpha = alpha / 2;
