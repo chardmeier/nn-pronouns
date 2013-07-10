@@ -59,7 +59,7 @@ function [output, internal] = fprop_net6(net, input, W, prediction_mode)
     end
     
     hidden = dropout(sigmoid(addbias([input.nada, sembed]) * W.embhid));
-    output = softmax(addbias([input.nada, hidden]) * W.hidout, 'addcategory'); 
+    output = sigmoid(addbias([input.nada, hidden]) * W.hidout); 
 
     internal = struct('Ahid', Ahid, 'Ares', Ares, 'wAres', wAres, 'antfeatures', antfeatures, ...
         'embed', embed, 'hidden', hidden);

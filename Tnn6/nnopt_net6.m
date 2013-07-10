@@ -43,11 +43,15 @@ function [best_weights, trainerr, valerr, best_valerr] = nnopt_net6(id, net, inp
     mverr = zeros(1, nsteps * nbatch);
     mv_t = 1;
     indices = [1:input.nitems, zeros(1, npad)];
+    dotstep = floor(nbatch / 80);
     for i = 1:nsteps
         batchperm = reshape(indices(randperm(numel(indices))), nbatch, batchsize);
         
         err = 0;
         for j = 1:nbatch
+            if mod(j, dotstep) == 0
+                fprintf('.');
+            end
             thisperm = batchperm(j, batchperm(j,:) > 0);
             batchinput = create_batch_net6(input, thisperm);
             Wstruct = weightstruct_net6(net, W);
@@ -84,9 +88,14 @@ function [best_weights, trainerr, valerr, best_valerr] = nnopt_net6(id, net, inp
             
             prev_grad = grad;
         end
+        fprintf('\n');
         %plot(1:length(mverr), mverr, 'erasemode', 'background');
         %drawnow;
-        trainerr(i) = err;
+        %trainerr(i) = err;
+        Wstruct = weightstruct_net6(net, W);
+        trainout = fprop_net6(net, input, Wstruct, true);
+        trainerr(i) = (-input.targets .* log(trainout) - ...
+            (1 - input.targets) .* log(1 - trainout)) / input.nitems;
         if adjust_rate && i > 6 && sum(diff(trainerr((i-6):(i-1))) > 0) > 2 && alphachange_steps > 5
             %alpha = alpha / 2;
             alpha = alpha * .8;
@@ -112,10 +121,10 @@ function [best_weights, trainerr, valerr, best_valerr] = nnopt_net6(id, net, inp
         
         alphachange_steps = alphachange_steps + 1;
         
-        Wstruct = weightstruct_net6(net, W);
         valout = fprop_net6(net, input.val, Wstruct, true);
-
-        valerr(i) = -sum(sum(input.val.targets .* log(max(tiny, valout)))) / input.val.nitems;
+        valerr(i) = (-input.val.targets .* log(valout) - ...
+            (1 - input.val.targets) .* log(1 - valout)) / input.val.nitems;
+        %valerr(i) = -sum(sum(input.val.targets .* log(max(tiny, valout)))) / input.val.nitems;
         if(valerr(i) < best_valerr)
             best_valerr = valerr(i);
             best_weights = W;

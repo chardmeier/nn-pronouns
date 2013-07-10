@@ -7,11 +7,7 @@ function G = bprop_net6(net, input, internal, output, W)
     
     G = struct();
 
-    % The last output of the softmax is unconnected
-    output = output(:,1:end-1);
-    targets = input.targets(:,1:end-1);
-
-    outlayer_inputgrads = output - targets;
+    outlayer_inputgrads = output - input.targets;
     
     G.hidout = addbias([input.nada, internal.hidden])' * outlayer_inputgrads;
     hidlayer_inputgrads = internal.hidden .* (1 - internal.hidden) .* ...

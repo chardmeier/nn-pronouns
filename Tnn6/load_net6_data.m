@@ -26,7 +26,7 @@ function [input, vocab] = load_net6_data(dataprefix, trainidx, validx, testidx)
     
     allsrc = spconvert([load(inpfile('srcfeat')); 1 ((vocab.srcngsize+1) * length(vocab.srcvoc) - 1) 0]);
     allant = spconvert([load(inpfile('antfeat')); 1 length(vocab.tgtvoc) 0]);
-    alltargets = load(inpfile('targets'));
+    alltargets = spconvert(load(inpfile('targets')));
     allantmap = load(inpfile('antmap'));
     
     alllink = spconvert(load(inpfile('linkfeat')));

@@ -17,7 +17,7 @@ function W = weightstruct_net6(net, weights)
     W.linkAhid = extract(net.link + 1, net.Ahid);
     W.AhidAres = extract(net.Ahid + 1, 1);
     W.embhid = extract(net.srcngsize * net.srcembed + net.antembed + 2, net.hidden);
-    W.hidout = extract(net.hidden + 2, net.output - 1);
+    W.hidout = extract(net.hidden + 2, net.output);
     
     if idx ~= length(weights) + 1
         error('Extracted %d items from weight vector of length %d', idx, length(weights));
