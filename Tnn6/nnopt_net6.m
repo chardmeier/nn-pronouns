@@ -93,9 +93,15 @@ function [best_weights, trainerr, valerr, best_valerr] = nnopt_net6(id, net, inp
         %drawnow;
         %trainerr(i) = err;
         Wstruct = weightstruct_net6(net, W);
-        trainout = fprop_net6(net, input, Wstruct, true);
-        trainerr(i) = (-input.targets .* log(trainout) - ...
-            (1 - input.targets) .* log(1 - trainout)) / input.nitems;
+
+        parts = [1:5000:input.nitems, input.nitems];
+        for j = 1:(length(parts) - 1)
+            batch = create_batch_net6(net, parts(j):(parts(j + 1) - 1));
+            batchout = fprop_net6(net, batch, Wstruct, true);
+            trainerr(i) = trainerr(i) + (-batch.targets .* log(batch) - ...
+                (1 - batch.targets) .* log(1 - batchout)) / input.nitems;
+	end
+
         if adjust_rate && i > 6 && sum(diff(trainerr((i-6):(i-1))) > 0) > 2 && alphachange_steps > 5
             %alpha = alpha / 2;
             alpha = alpha * .8;
