@@ -131,8 +131,9 @@ function [best_weights, trainerr, valerr, best_valerr] = nnopt_net6(id, net, inp
             break
         end
         
-        if mod(i, 10) == 0
-            save('-v7.3', sprintf('nn6-%s.%d.mat', id, i));
+        if mod(i, 5) == 0
+            %save('-v7.3', sprintf('nn6-%s.%d.mat', id, i));
+            save('-v7.3', sprintf('nn6-%s.mat', id));
         end
     end
     
