@@ -38,7 +38,7 @@ function [input, vocab] = load_net6_data(dataprefix, trainidx, validx, testidx)
     allantidx = cellfun(@(x) range(logical(map(:,x))), num2cell(1:nexamples), ...
         'UniformOutput', false);
 
-    allnada = sparse(nexamples, 1);
+    allnada = load(inpfile('nada'));
 
     trainant = vertcat(allantidx{trainidx});
     trainlink = alllink(trainant,:);
