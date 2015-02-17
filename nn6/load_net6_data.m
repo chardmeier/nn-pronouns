@@ -53,24 +53,28 @@ function [input, vocab] = load_net6_data(dataprefix, trainidx, validx, testidx)
     input.targets = alltargets(trainidx,:);
     [input.antmap,input.antidx] = idxcell2map(allantidx(trainidx));
     
-    valant = vertcat(allantidx{validx});
-    input.val = struct();
-    input.val.nitems = length(validx);
-    input.val.src = allsrc(validx,:);
-    input.val.ant = allant(valant,:);
-    input.val.link = alllink(valant,vocab.activelinkfeat);
-    input.val.targets = alltargets(validx,:);
-    input.val.nada = allnada(validx);
-    [input.val.antmap,input.val.antidx] = idxcell2map(allantidx(validx));
+    if length(validx) > 0
+        valant = vertcat(allantidx{validx});
+        input.val = struct();
+        input.val.nitems = length(validx);
+        input.val.src = allsrc(validx,:);
+        input.val.ant = allant(valant,:);
+        input.val.link = alllink(valant,vocab.activelinkfeat);
+        input.val.targets = alltargets(validx,:);
+        input.val.nada = allnada(validx);
+        [input.val.antmap,input.val.antidx] = idxcell2map(allantidx(validx));
+    end
     
-    testant = vertcat(allantidx{testidx});
-    input.test = struct();
-    input.test.nitems = length(testidx);
-    input.test.src = allsrc(testidx,:);
-    input.test.ant = allant(testant,:);
-    input.test.link = alllink(testant,vocab.activelinkfeat);
-    input.test.nada = allnada(testidx);
-    input.test.targets = alltargets(testidx,:);
-    [input.test.antmap,input.test.antidx] = idxcell2map(allantidx(testidx));
+    if length(testidx) > 0
+        testant = vertcat(allantidx{testidx});
+        input.test = struct();
+        input.test.nitems = length(testidx);
+        input.test.src = allsrc(testidx,:);
+        input.test.ant = allant(testant,:);
+        input.test.link = alllink(testant,vocab.activelinkfeat);
+        input.test.nada = allnada(testidx);
+        input.test.targets = alltargets(testidx,:);
+        [input.test.antmap,input.test.antidx] = idxcell2map(allantidx(testidx));
+    end
 end
 
