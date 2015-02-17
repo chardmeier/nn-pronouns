@@ -35,7 +35,9 @@ function dump_model(outstem, net, voc, W)
     % - output layer size
     
     if isfield(net, 'sample_antfeatures') && net.sample_antfeatures
-        version = 2;
+        %version = 2;   % NADA disabled
+        %version = 3;    % NADA enabled
+        version = 4;    % NADA enabled, softmax fixed
     else
         version = 1;
     end
