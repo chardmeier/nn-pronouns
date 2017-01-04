@@ -1,6 +1,6 @@
 function net = setup_net6(srcembed, antembed, Ahid, hidden, output, vocab)
-%UNTITLED4 Summary of this function goes here
-%   Detailed explanation goes here
+% Set up a network configuration (layer sizes and vocabularies).
+
     net = struct();
     net.link = sum(vocab.activelinkfeat);
     net.srcembed = srcembed;

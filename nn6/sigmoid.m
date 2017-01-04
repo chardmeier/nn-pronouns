@@ -1,6 +1,6 @@
 function s = sigmoid(x)
-%UNTITLED Summary of this function goes here
-%   Detailed explanation goes here
+% Logistic sigmoid function.
+
     s = 1 ./ (1 + exp(-x));
 end
 

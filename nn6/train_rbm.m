@@ -1,6 +1,5 @@
 function weights = train_rbm(id, data, val, nhid)
-%UNTITLED Summary of this function goes here
-%   Detailed explanation goes here
+% Train restricted Boltzmann machine. Not used for NN6 training.
 
     function S = sample_bernoulli(P)
         S = rand(size(P)) < P;

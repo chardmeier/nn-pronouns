@@ -1,6 +1,5 @@
 function batch = create_batch_net6(input, batchperm)
-%UNTITLED6 Summary of this function goes here
-%   Detailed explanation goes here
+% Create batch from a subset of the input set.
 
     batchant = vertcat(input.antidx{batchperm});
     

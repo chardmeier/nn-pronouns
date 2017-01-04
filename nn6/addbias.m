@@ -1,6 +1,5 @@
 function out = addbias(in)
-%UNTITLED3 Summary of this function goes here
-%   Detailed explanation goes here
+% Add an initial column of ones to a matrix
     out = [ones(size(in, 1), 1), in];
 end
 

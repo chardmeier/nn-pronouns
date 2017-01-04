@@ -1,6 +1,7 @@
 function Success = check_gradients_net6(net, inp, W, order)
-%UNTITLED Summary of this function goes here
-%   Detailed explanation goes here
+% Check the gradients obtained by backpropagation against a
+% finite differences approximations. Order is the order of the
+% approximation.
     
     function S = score(inp, out)
         S = -sum(inp.targets(:) .* log(out(:)));

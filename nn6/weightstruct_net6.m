@@ -1,6 +1,5 @@
 function W = weightstruct_net6(net, weights)
-%UNTITLED3 Summary of this function goes here
-%   Detailed explanation goes here
+% Convert NN6 weights from flat vector to structure.
 
     function mat = extract(i, j)
         mat = reshape(weights(idx:(idx+i*j-1)), i, j);

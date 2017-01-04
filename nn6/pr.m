@@ -1,6 +1,5 @@
 function PRF = pr(test, truth)
-%UNTITLED Summary of this function goes here
-%   Detailed explanation goes here
+% Compute precision, recall and F-scores for the network's predictions.
 
     hardtest = (test == repmat(max(test, [], 2), 1, size(test, 2)));
 

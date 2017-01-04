@@ -1,6 +1,5 @@
 function [output, internal] = fprop_net6(net, input, W, prediction_mode)
-%UNTITLED2 Summary of this function goes here
-%   Detailed explanation goes here
+% Forward propagation pass for NN6 network.
     
     srcembed_bias = isfield(net, 'srcembed_bias') && net.srcembed_bias;
     

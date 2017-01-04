@@ -1,6 +1,7 @@
 function out = softmax(in, varargin)
-%UNTITLED4 Summary of this function goes here
-%   Detailed explanation goes here
+% Compute softmax probabilities. If 'addcategory' is passed as an argument,
+% an extra column of zeros is added to the inputs before computing the softmax.
+
     if nargin > 1 && strcmp(varargin{1}, 'addcategory')
         in2 = [in, zeros(size(in, 1), 1)];
     else

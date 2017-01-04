@@ -1,6 +1,6 @@
 function [map,outidx] = idxcell2map(inidx)
-%UNTITLED2 Summary of this function goes here
-%   Detailed explanation goes here
+% Convert mapping between training examples and antecedent candidates from
+% index cell array to mapping matrix.
 
     mapidx = cellfun(@(x,i) i*ones(size(x,1),1), inidx, ...
         num2cell(1:size(inidx,2)), 'UniformOutput', false);

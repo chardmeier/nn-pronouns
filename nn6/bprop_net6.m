@@ -1,6 +1,5 @@
 function G = bprop_net6(net, input, internal, output, W)
-%UNTITLED4 Summary of this function goes here
-%   Detailed explanation goes here
+% Compute gradients for NN6
 
     antembed_bias = isfield(net, 'antembed_bias') && net.antembed_bias;
     srcembed_bias = isfield(net, 'srcembed_bias') && net.srcembed_bias;

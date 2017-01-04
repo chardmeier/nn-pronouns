@@ -1,7 +1,5 @@
 function out = transform_weights(fn, varargin)
-%UNTITLED5 Summary of this function goes here
-%   Detailed explanation goes here
-    
+% Apply a transformation function to all weights.
     out = fn(varargin{:});
 end
 

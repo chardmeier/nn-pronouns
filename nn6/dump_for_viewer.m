@@ -1,4 +1,7 @@
 function dump_for_viewer(outfile, test, testout, internal)
+% Dump the predictions made by the network in a format that can
+% be read by the external visualisation tool.
+
     id = fopen(outfile, 'w');
     fprintf(id, 'ce\telle\telles\til\tils\tOTHER\n');
     fprintf(id, 'SOLUTIONS\n');

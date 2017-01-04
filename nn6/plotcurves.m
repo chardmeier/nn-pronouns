@@ -1,6 +1,6 @@
 function plotcurves(varargin)
-%UNTITLED Summary of this function goes here
-%   Detailed explanation goes here
+% Convenience function to plot a number of training curves with default colours.
+
     styles = {'b-','r-','c-','m-','bo','ro','co','mo'};
     hold off;
     for i = 1:length(varargin)

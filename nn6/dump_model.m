@@ -1,6 +1,6 @@
 function dump_model(outstem, net, voc, W)
-%UNTITLED Summary of this function goes here
-%   Detailed explanation goes here
+% Save a trained model to disk.
+
     id = fopen(strcat(outstem, '.nn6.srcvoc'), 'w', 'n', 'UTF-8');
     fprintf(id, '%s\n', net.srcvoc{:});
     fclose(id);

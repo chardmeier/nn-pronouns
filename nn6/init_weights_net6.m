@@ -1,6 +1,5 @@
 function W = init_weights_net6(net, initfn)
-%UNTITLED6 Summary of this function goes here
-%   Detailed explanation goes here
+% Initialise NN6 network weights.
     
     antembed_bias = isfield(net, 'antembed_bias') && net.antembed_bias;
     srcembed_bias = isfield(net, 'srcembed_bias') && net.srcembed_bias;

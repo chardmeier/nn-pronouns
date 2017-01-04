@@ -1,6 +1,5 @@
 function [LC,info] = create_lcurve(id, net, input, params, samples)
-%UNTITLED Summary of this function goes here
-%   Detailed explanation goes here
+% Create learning curve by training network on an increasing number of samples.
 
     info(length(samples)).bve = inf; % preallocation
     LC = zeros(length(samples), 1);

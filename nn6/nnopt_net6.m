@@ -1,6 +1,5 @@
 function [best_weights, trainerr, valerr, best_valerr] = nnopt_net6(id, net, input, params)
-%UNTITLED7 Summary of this function goes here
-%   Detailed explanation goes here
+% Train network with a variant of the rmsprop algorithm.
 
     stddev = params.stddev;
     momentum = params.momentum;
